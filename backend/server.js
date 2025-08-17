@@ -108,10 +108,28 @@ if (!gCount) {
   } catch (e) { console.warn('Failed to seed games', e) }
 }
 
-// Ensure uploads folder exists (configurable for Render persistent disk)
-const uploadsRootEnv = process.env.UPLOADS_DIR || process.env.RENDER_DISK || (process.env.RENDER ? '/data' : null);
-const uploadsDir = uploadsRootEnv ? path.join(uploadsRootEnv, 'uploads') : path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure uploads folder exists with robust fallback logic.
+// We try candidates in order and pick the first that is writable for creating 'uploads/'.
+const uploadBaseCandidates = [
+  process.env.UPLOADS_DIR,
+  process.env.RENDER_DISK,
+  '/data',
+  __dirname,
+].filter(Boolean);
+
+let uploadsBase = __dirname;
+let uploadsDir = path.join(uploadsBase, 'uploads');
+for (const base of uploadBaseCandidates) {
+  try {
+    const dir = path.join(base, 'uploads');
+    fs.mkdirSync(dir, { recursive: true });
+    uploadsBase = base;
+    uploadsDir = dir;
+    break;
+  } catch (_) {
+    // try next candidate
+  }
+}
 const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 
