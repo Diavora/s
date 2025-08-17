@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: xpdrop-web
+    rootDir: backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disks:
+      - name: uploads
+        mountPath: /data
+        sizeGB: 5

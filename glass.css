@@ -1,0 +1,54 @@
+/* Glassmorphism + fluid gradient theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+:root{
+  --bg-grad:linear-gradient(135deg,#1e1f46 0%, #0e0e12 100%);
+  --glass-bg:rgba(255,255,255,.08);
+  --glass-border:1px solid rgba(255,255,255,.22);
+  --accent1:#7b5cff;
+  --accent2:#ff3b8d;
+  --text:#fff;
+}
+
+body{background:var(--bg-grad);color:var(--text);}
+*{font-family:'Inter',sans-serif;color:var(--text);}
+
+/* glass card style */
+.card,.lot,.item-card,.info-block,.deal-row{
+  background:var(--glass-bg);
+  border:var(--glass-border);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 4px 30px rgba(0,0,0,.5);
+}
+.card:hover,.lot:hover{transform:translateY(-4px);box-shadow:0 8px 26px rgba(0,0,0,.6);} 
+
+/* inputs */
+.search-input,.form input,.form textarea,.form select{
+  background:var(--glass-bg);
+  border:var(--glass-border);
+  backdrop-filter:blur(10px);
+  color:var(--text);
+}
+.search-input:focus,.form input:focus,.form textarea:focus{outline:none;border-color:var(--accent1);} 
+
+/* accent button with gradient */
+.accent-btn{
+  background:linear-gradient(135deg,var(--accent1),var(--accent2));
+  border:none;
+}
+.accent-btn:hover{filter:brightness(1.1);} 
+
+.nav-wrap .bottom-nav{
+  background:var(--glass-bg);
+  border:var(--glass-border);
+  backdrop-filter:blur(15px);
+  -webkit-backdrop-filter:blur(15px);
+}
+.nav-btn{color:#ccc;} .nav-btn.active,.nav-btn:hover{color:var(--accent1);} 
+
+.overlay{background:rgba(0,0,0,.45);} 
+
+.avatar-wrapper img{border:4px solid var(--accent1);} 
+
+.hidden{display:none !important;}

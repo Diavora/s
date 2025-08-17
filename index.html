@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мой Магазин</title>
+  <link rel="stylesheet" href="style.css" id="main-style" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Poppins:wght@600;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <main id="app">
+        <!-- Каталог -->
+    <section id="catalog" class="page active">
+      <div class="page-container">
+          <div class="catalog-header">
+            <div class="brand-row">
+                <a href="#" class="logo-xpdrop" aria-label="XP DROP">
+                    <span class="xp-box">XP</span>
+                    <span class="drop-text">DROP</span>
+                </a>
+                <button id="theme-toggle" class="theme-btn" title="Тема">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            <div class="search-row">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="catalog-search" class="search-input" placeholder="Поиск по играм...">
+                </div>
+            </div>
+          </div>
+
+          <!-- Main Banner -->
+          <div class="page-content">
+            <div class="banner-row">
+                <aside class="banner-side left-offers">
+                    <div class="offer-card">
+                        <i class="fa-solid fa-bolt"></i>
+                        <div>
+                          <div class="offer-title">Моментальная доставка</div>
+                          <div class="offer-sub">Авто-выдача 24/7</div>
+                        </div>
+                    </div>
+                    <div class="offer-card">
+                        <i class="fa-solid fa-shield"></i>
+                        <div>
+                          <div class="offer-title">Гарантия и защита</div>
+                          <div class="offer-sub">Безопасные сделки</div>
+                        </div>
+                    </div>
+                    <div class="offer-card">
+                        <i class="fa-solid fa-headset"></i>
+                        <div>
+                          <div class="offer-title">Поддержка</div>
+                          <div class="offer-sub">Онлайн помощь</div>
+                        </div>
+                    </div>
+                </aside>
+                <div class="banner-container main-banner-container">
+                    <div class="banner main-banner">
+                        <img src="images/main-banner.png" alt="Главный баннер" class="banner-image">
+                    </div>
+                </div>
+                <aside class="banner-side right-stats">
+                    <div class="stats-card">
+                        <div class="stat-value">4.9<span>★</span></div>
+                        <div class="stat-label">Рейтинг</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-value">1.2k</div>
+                        <div class="stat-label">Продаж</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-value">200+</div>
+                        <div class="stat-label">Игр</div>
+                    </div>
+                </aside>
+            </div>
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-button active" data-category="pc">ПК Игры</button>
+                    <button class="tab-button" data-category="mobile">Мобильные Игры</button>
+                    <button class="tab-button" data-category="apps">Приложения</button>
+                </div>
+                <div id="tab-content" class="card-grid">
+                    <!-- Game cards will be loaded here -->
+                </div>
+                <button id="show-all-btn" class="btn-link" style="display: none;">Показать все</button>
+                <button id="show-less-btn" class="btn-link" style="display: none;">Свернуть</button>
+            </div>
+
+            <div class="category-section">
+                <h2 class="category-title">Горячие Товары</h2>
+                <div class="hot-items-banner-container">
+                    <div class="banner hot-items-banner">
+                        <p>Здесь будет баннер горячих товаров</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-section">
+                <h2 class="category-title">Все Товары</h2>
+                <div id="all-items-content" class="card-grid">
+                    <!-- All random items will be loaded here -->
+                </div>
+                 <!-- All random items will be loaded here -->
+            </div>
+        </div>
+    </div>
+</section>
+
+    <section id="game-items-page" class="page">
+        <div class="page-container">
+            <!-- Items will be loaded here by JS -->
+        </div>
+    </section>
+
+    <!-- Чаты -->
+    <section id="chats" class="page">
+      <div class="page-container">
+        <div class="chats-header">
+          <h1>Чаты</h1>
+          <button id="chats-help-btn" class="icon-btn" title="Правила чата">
+            <i class="fa-solid fa-circle-question"></i>
+          </button>
+        </div>
+        <div class="chats-layout">
+          <aside class="dialogs-list">
+            <div class="list-title">Диалоги</div>
+            <div id="dialogs" class="list-placeholder">Пока нет диалогов</div>
+          </aside>
+          <section class="chat-window">
+            <div class="chat-header">
+              <button id="chat-back" class="icon-btn back-btn" title="Назад" aria-label="Назад">
+                <i class="fa-solid fa-arrow-left"></i>
+              </button>
+              <div class="chat-partner">
+                <img id="chat-partner-avatar" class="avatar" src="https://via.placeholder.com/40x40.png?text=U" alt="" />
+                <div class="partner-meta">
+                  <div id="chat-partner-name">Выберите диалог</div>
+                  <div class="presence"><span class="presence-dot online"></span><span class="presence-text">в сети</span></div>
+                </div>
+              </div>
+            </div>
+            <div id="chat-thread" class="chat-thread">
+              <div class="sys-msg">Выберите диалог слева, чтобы начать общение.</div>
+              <div class="typing-indicator hidden" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+              <button id="chat-scroll-bottom" class="icon-btn ghost scroll-bottom" title="Вниз" aria-label="Прокрутить вниз">
+                <i class="fa-solid fa-arrow-down"></i>
+              </button>
+            </div>
+            <form id="chat-form" class="chat-input" autocomplete="off">
+              <div class="chat-tools">
+                <button type="button" id="chat-emoji" class="icon-btn small" title="Эмодзи" aria-label="Эмодзи">
+                  <i class="fa-regular fa-face-smile"></i>
+                </button>
+                <button type="button" id="chat-attach" class="icon-btn small" title="Вложение" aria-label="Вложение">
+                  <i class="fa-solid fa-paperclip"></i>
+                </button>
+              </div>
+              <input id="chat-text" type="text" placeholder="Введите сообщение..." />
+              <button type="submit" class="icon-btn small send-btn" title="Отправить" aria-label="Отправить">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- Продажа -->
+    <section id="sell" class="page">
+      <h1>Продать товар</h1>
+      <div id="sell-select">
+        <input id="sell-search" class="search-input" type="text" placeholder="Поиск игры..." />
+        <div id="sell-game-list" class="cards full"></div>
+      </div>
+
+      <div id="sell-form-wrapper" class="hidden">
+        <div class="chosen-preview">
+          <img id="chosen-img" class="preview-img" src="" alt="" />
+          <span id="chosen-title"></span>
+          <button id="change-game" type="button" class="accent-btn small">Изменить игру</button>
+        </div>
+        <form id="sell-form" class="form">
+          <label>Название товара
+              <input type="text" name="name" required />
+            </label>
+            <label>Описание
+            <textarea name="desc" rows="4" required></textarea>
+          </label>
+          <label>Фото товара
+            <input type="file" id="sell-photo" name="photo" accept="image/*" required />
+          </label>
+          <label>Цена (₽)
+            <input type="number" name="price" min="0" required />
+          </label>
+          <button type="submit" class="accent-btn">Выставить</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Сделки -->
+    <section id="deals" class="page">
+      <div class="page-container">
+        <div class="deals-header">
+          <h1>Сделки</h1>
+          <button id="deals-help-btn" class="icon-btn" title="Как работает сделка?">
+            <i class="fa-solid fa-circle-question"></i>
+          </button>
+        </div>
+        <div id="deals-list" class="list-placeholder">Пока нет активных сделок</div>
+      </div>
+    </section>
+
+    <!-- Профиль -->
+    <section id="profile" class="page">
+      <h1>Профиль</h1>
+      <div class="avatar-wrapper">
+        <img id="avatar" src="https://via.placeholder.com/120x120.png?text=Avatar" alt="avatar" />
+        <input type="file" id="avatar-input" accept="image/*" hidden />
+        <button id="change-avatar" class="accent-btn small">Сменить</button>
+      </div>
+      <div class="info-blocks">
+        <div class="info-block"><span>Баланс:</span><strong id="balance">0 ₽</strong></div>
+        <div class="info-block"><span>Заморожено:</span><strong id="frozen">0 ₽</strong></div>
+      </div>
+      <div class="profile-actions">
+        <button class="accent-btn">Мои покупки</button>
+        <button class="accent-btn">Мои продажи</button>
+        <button class="accent-btn">Вывод</button>
+        <button class="accent-btn">Пополнить</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Навигация -->
+  <!-- Item modal -->
+  <div id="toast-root"></div>
+  <div id="item-modal" class="overlay hidden">
+    <div class="modal-card">
+      <img id="item-modal-img" src="" alt="" />
+      <h3 id="item-modal-name"></h3>
+      <p id="item-modal-desc"></p>
+      <span id="item-modal-seller" class="seller"></span>
+      <strong id="item-modal-price"></strong>
+      <div class="modal-actions">
+        <button id="item-buy" class="accent-btn">Купить</button>
+        <button id="item-close" class="accent-btn small">Отмена</button>
+      </div>
+    </div>
+  </div>
+  <!-- Auth modal -->
+  <div id="auth-overlay" class="overlay hidden">
+    <div class="auth-card">
+      <h2 id="auth-title">Регистрация</h2>
+      <form id="auth-form" class="form">
+        <label>Никнейм
+          <input type="text" name="nickname" required autocomplete="username" />
+        </label>
+        <label>Пароль
+          <input type="password" name="password" required autocomplete="current-password" minlength="6"/>
+        </label>
+        <label id="confirm-password-label" class="hidden">Подтвердите пароль
+          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6"/>
+        </label>
+        <p id="auth-error" class="error-msg"></p>
+        <button type="submit" class="accent-btn">Войти</button>
+        <button type="button" id="switch-auth-btn" class="link-btn">Нет аккаунта? Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Deal modal -->
+  <div id="deal-modal" class="overlay hidden">
+    <div class="modal-card deal-modal-card">
+      <button id="deal-close" class="close-x" aria-label="Закрыть">✖</button>
+      <div id="deal-modal-body" class="deal-modal-body">
+        <!-- Заполняется динамически -->
+      </div>
+      <div id="deal-actions" class="deal-actions">
+        <!-- Кнопки действий подставляются динамически -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Deal help modal -->
+  <div id="deal-help" class="overlay hidden">
+    <div class="modal-card help-card">
+      <button id="deal-help-close" class="close-x" aria-label="Закрыть">✖</button>
+      <h2>Как работает сделка</h2>
+      <ol class="help-steps">
+        <li><strong>Покупка:</strong> покупатель замораживает сумму, товар резервируется.</li>
+        <li><strong>Передача товара:</strong> продавец передаёт доступы/предметы и подтверждает передачу.</li>
+        <li><strong>Завершение:</strong> покупатель проверяет и завершает сделку — деньги уходят продавцу.</li>
+        <li><strong>Спор:</strong> если есть проблема, любой участник может открыть спор до завершения.</li>
+      </ol>
+      <p class="help-note">Средства безопасно хранятся на эскроу до завершения сделки.</p>
+    </div>
+  </div>
+
+  <!-- Chats help modal -->
+  <div id="chats-help" class="overlay hidden">
+    <div class="modal-card help-card">
+      <button id="chats-help-close" class="close-x" aria-label="Закрыть">✖</button>
+      <h2>Правила чата и передачи товара</h2>
+      <ul class="help-steps">
+        <li><strong>Передача товара</strong> осуществляется строго в этом чате. Не переходите в сторонние мессенджеры.</li>
+        <li>Все договорённости и материалы фиксируйте сообщениями в чате.</li>
+        <li>Не отправляйте оплату напрямую — средства заморожены в эскроу до завершения сделки.</li>
+        <li>При проблемах используйте «Открыть спор» в разделе Сделок.</li>
+      </ul>
+      <p class="help-note">Системные уведомления появляются в чате автоматически: «Сделка завершена», «Средства зачислены», «Покупатель открыл спор» и т.п.</p>
+    </div>
+  </div>
+
+  <div class="nav-wrap">
+    <svg class="nav-border" viewBox="0 0 400 60" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#bb0040"/>
+            <stop offset="100%" stop-color="#bb0040" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+      <path class="border-path" d="M0,0 L400,0 L400,60 L0,60 Z" rx="25" ry="25" pathLength="1" stroke="url(#border-grad)" stroke-width="2" fill="none" />
+    </svg>
+    <nav class="bottom-nav">
+    <button data-target="catalog-page" class="nav-btn active"><i class="fa-solid fa-layer-group"></i><span>Каталог</span></button>
+    <button data-target="sell" class="nav-btn protected"><i class="fa-solid fa-tag"></i><span>Продажа</span></button>
+    <button data-target="deals" class="nav-btn"><i class="fa-solid fa-handshake"></i><span>Сделки</span></button>
+    <button data-target="chats" class="nav-btn"><i class="fa-solid fa-comments"></i><span>Чаты</span></button>
+    <button class="nav-btn" data-target="profile"><i class="fas fa-user"></i><span>Профиль</span></button>
+  </nav>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

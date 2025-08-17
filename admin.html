@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+ <html lang="ru">
+ <head>
+  <meta charset="UTF-8">
+  <title>Управление баннерами</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+    }
+    .game-list {
+      margin: 20px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .game-item {
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+    }
+    .game-item h3 {
+      margin-top: 0;
+      color: #fff;
+      font-size: 1.1rem;
+    }
+    .banner-preview {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin: 10px 0;
+      background: #2a2a2a;
+      border: 1px solid #444;
+    }
+    .upload-form {
+      margin-top: auto;
+    }
+    .upload-form input[type="file"] {
+      width: 100%;
+      margin-bottom: 10px;
+      background: #333;
+      border: 1px solid #555;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    .upload-btn {
+      background: #bb0040;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    .upload-btn:hover {
+      background: #d4004a;
+    }
+    .upload-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .message {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #bb0040;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.5s;
+    }
+    .message.show {
+        opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Управление баннерами игр</h1>
+  <p style="margin:6px 0 14px;color:#bdbdbd">Рекомендованный размер: <b>1500×1024</b>. Форматы: JPG/PNG. Для мобильных игр загрузите обложки с хорошим качеством.</p>
+  <hr style="border-color:#333;margin:20px 0">
+  <h2 style="margin:8px 0 6px">Админ: Баланс пользователей</h2>
+  <div id="admin-users" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <input id="admin-user-search" placeholder="Поиск по нику..." style="flex:1;min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+    <button id="admin-user-search-btn" class="upload-btn" style="width:auto;padding:8px 12px">Найти</button>
+    <button id="admin-user-refresh-btn" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">Обновить</button>
+  </div>
+  <div id="bulk-import" style="margin:18px 0; padding:12px; border:1px dashed #444; border-radius:8px; background:#171717">
+    <h2 style="margin:0 0 8px">Импорт товаров из папок</h2>
+    <p style="margin:0 0 10px; color:#bdbdbd">
+      Структура: <code>Игpa/Папка_товара/info.json</code> + изображение товара (.jpg/.jpeg/.png/.webp). 
+      В <code>info.json</code> должны быть поля <b>title</b> и <b>price</b>.
+    </p>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input id="dir-picker" type="file" webkitdirectory multiple style="background:#1e1e1e;color:#e0e0e0;border:1px solid #444;padding:8px 10px;border-radius:6px" />
+      <select id="import-target-game" title="Добавлять в выбранную игру (опционально)" style="min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+        <option value="">Выберите игру (опционально)</option>
+      </select>
+      <select id="import-category" title="Категория по умолчанию" style="padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+        <option value="mobile" selected>Категория по умолчанию: Мобильные</option>
+        <option value="pc">Категория по умолчанию: ПК</option>
+        <option value="apps">Категория по умолчанию: Приложения</option>
+      </select>
+      <button id="start-import" class="upload-btn" style="width:auto;padding:8px 12px">Начать импорт</button>
+      <span id="import-progress" style="opacity:.9"></span>
+    </div>
+  </div>
+  <div id="playerok-import" style="margin:18px 0; padding:12px; border:1px dashed #444; border-radius:8px; background:#171717">
+    <h2 style="margin:0 0 8px">Импорт с PlayerOK</h2>
+    <p style="margin:0 0 10px; color:#bdbdbd">Вставьте ссылку на список товаров PlayerOK. Выберите игру-назначение. Будет импортировано до 50 товаров. Описания не добавляются.</p>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input id="playerok-url" placeholder="https://playerok.com/..." style="flex:1;min-width:280px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+      <select id="playerok-target-game" title="Куда добавить товары" style="min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+        <option value="">Выберите игру</option>
+      </select>
+      <input id="playerok-limit" type="number" min="1" max="50" value="50" title="Лимит товаров (макс. 50)" style="width:120px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+      <label for="playerok-debug-ignore" style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <input id="playerok-debug-ignore" type="checkbox" />
+        <span style="color:#9e9e9e">ignore existing (debug)</span>
+      </label>
+      <button id="playerok-start" class="upload-btn" style="width:auto;padding:8px 12px">Импортировать</button>
+      <span id="playerok-progress" style="opacity:.9"></span>
+    </div>
+    <div style="margin-top:8px">
+      <button id="playerok-toggle-html" type="button" class="upload-btn" style="width:auto;padding:6px 10px;background:#2d2d2d">Вставить HTML вручную</button>
+    </div>
+    <div id="playerok-html-wrap" style="display:none;margin-top:8px">
+      <textarea id="playerok-html" rows="10" placeholder="Если сайт блокирует запросы (403), откройте ссылку в браузере, нажмите Ctrl+U (Просмотр кода страницы), скопируйте весь HTML и вставьте сюда" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#121212;color:#e0e0e0;resize:vertical"></textarea>
+      <div style="color:#9e9e9e;margin-top:6px">Мы распарсим HTML локально на сервере без прямого запроса к PlayerOK. Никаких паролей сюда вставлять не нужно.</div>
+    </div>
+    <div id="playerok-result" style="margin-top:10px; font-size:.95rem; color:#bdbdbd"></div>
+    <div id="playerok-logs-wrap" style="display:none;margin-top:8px">
+      <div style="color:#9e9e9e;margin-bottom:4px">Логи импорта (ошибки/предупреждения):</div>
+      <pre id="playerok-logs" style="white-space:pre-wrap;background:#141414;border:1px solid #444;padding:8px;border-radius:6px;max-height:220px;overflow:auto;color:#cfcfcf"></pre>
+    </div>
+  </div>
+  <div id="admin-user-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:18px"></div>
+
+  <div id="admin-items" style="margin:18px 0; padding:12px; border:1px dashed #444; border-radius:8px; background:#171717">
+    <h2 style="margin:0 0 8px">Админ: Товары</h2>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px">
+      <select id="items-game-filter" title="Фильтр по игре" style="min-width:240px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+        <option value="">Все игры</option>
+      </select>
+      <select id="items-status" title="Статус" style="padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+        <option value="all" selected>Все статусы</option>
+        <option value="active">Только активные</option>
+      </select>
+      <input id="items-search" placeholder="Поиск по названию товара..." style="flex:1;min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+      <button id="items-refresh" class="upload-btn" style="width:auto;padding:8px 12px">Обновить</button>
+      <button id="items-bulk-delete" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">Удалить выбранные</button>
+    </div>
+    <div id="admin-items-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+    <div style="display:flex;justify-content:center;margin-top:10px">
+      <button id="items-load-more" class="upload-btn" style="width:auto;padding:8px 12px;display:none">Загрузить ещё</button>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+    <div id="cat-filters" style="display:flex;gap:8px">
+      <button data-cat="all" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">Все</button>
+      <button data-cat="pc" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">ПК</button>
+      <button data-cat="mobile" class="upload-btn" style="width:auto;padding:8px 12px;background:#bb0040">Мобильные</button>
+      <button data-cat="apps" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">Приложения</button>
+    </div>
+    <input id="search" placeholder="Поиск по названию..." style="flex:1;min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+  </div>
+  <div id="add-game" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 16px">
+    <input id="new-game-name" placeholder="Название игры" value="Black Russia" style="flex:1;min-width:220px;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+    <select id="new-game-cat" style="padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0">
+      <option value="pc">ПК</option>
+      <option value="mobile" selected>Мобильные</option>
+      <option value="apps">Приложения</option>
+    </select>
+    <button id="add-game-btn" class="upload-btn" style="width:auto;padding:8px 12px">Добавить игру</button>
+    <button id="quick-add-br" class="upload-btn" style="width:auto;padding:8px 12px;background:#2d2d2d">+ Black Russia</button>
+  </div>
+  <div class="game-list" id="gameList">
+    <p>Загрузка списка игр...</p>
+  </div>
+  <div class="message" id="message-box"></div>
+
+  <script>
+    const gameListEl = document.getElementById('gameList');
+    const messageBox = document.getElementById('message-box');
+    const catFilters = document.getElementById('cat-filters');
+    const searchInput = document.getElementById('search');
+    // Импорт
+    const dirPicker = document.getElementById('dir-picker');
+    const startImportBtn = document.getElementById('start-import');
+    const importTargetGame = document.getElementById('import-target-game');
+    const importCatSel = document.getElementById('import-category');
+    const importProgress = document.getElementById('import-progress');
+    let allGames = [];
+    let currentCat = 'mobile';
+    let gamesLoaded = false;
+    // Блокируем старт импорта до загрузки игр (во избежание рассинхронизации селектора)
+    if (startImportBtn) startImportBtn.disabled = true;
+
+    // === Админ: пользователи и баланс ===
+    const adminSearch = document.getElementById('admin-user-search');
+    const adminSearchBtn = document.getElementById('admin-user-search-btn');
+    const adminRefreshBtn = document.getElementById('admin-user-refresh-btn');
+    const adminList = document.getElementById('admin-user-list');
+
+    function renderAdminUsers(users){
+      if (!adminList) return;
+      if (!users || !users.length){
+        adminList.innerHTML = '<p style="opacity:.8">Пользователи не найдены</p>';
+        return;
+      }
+      adminList.innerHTML = users.map(u => `
+        <div class="game-item" style="gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="${u.avatar_url || '/images/placeholder.png'}" alt="ava" style="width:42px;height:42px;border-radius:8px;object-fit:cover;border:1px solid #333;background:#2a2a2a">
+            <div style="flex:1">
+              <div style="font-weight:600;color:#fff">${u.nickname} <span style="opacity:.7">#${u.id}</span></div>
+              <div style="font-size:.9rem;color:#bdbdbd">Баланс: <b>${u.balance}</b> ₽ · Заморожено: <b>${u.frozen_balance||0}</b> ₽</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="number" min="1" placeholder="Сумма" data-user="${u.id}" class="adm-sum" style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+            <button class="upload-btn adm-credit" data-user="${u.id}" style="width:auto;padding:8px 12px">+ Начислить</button>
+            <button class="upload-btn adm-debit" data-user="${u.id}" style="width:auto;padding:8px 12px;background:#2d2d2d">- Списать</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" placeholder="Комментарий (опц.)" data-reason="${u.id}" style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#1e1e1e;color:#e0e0e0" />
+          </div>
+        </div>
+      `).join('');
+
+      adminList.querySelectorAll('.adm-credit').forEach(btn=>btn.addEventListener('click',()=>adminCredit(btn.dataset.user, true)));
+      adminList.querySelectorAll('.adm-debit').forEach(btn=>btn.addEventListener('click',()=>adminCredit(btn.dataset.user, false)));
+    }
+
+    async function loadAdminUsers(){
+      const token = localStorage.getItem('token');
+      if (!adminList) return;
+      if (!token) {
+        adminList.innerHTML = '<p style="opacity:.8">Нужна авторизация админа</p>';
+        showMessage('Нужна авторизация админа', true);
+        return;
+      }
+      try{
+        const q = encodeURIComponent(adminSearch?.value||'');
+        const r = await fetch(`/api/admin/users?q=${q}`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error||'Ошибка загрузки пользователей');
+        renderAdminUsers(data);
+      }catch(e){
+        console.error(e);
+        showMessage(e.message, true);
+      }
+    }
+
+    async function adminCredit(userId, isCredit){
+      const token = localStorage.getItem('token');
+      if (!token) return showMessage('Нужна авторизация админа', true);
+      const sumEl = adminList.querySelector(`.adm-sum[data-user="${userId}"]`);
+      const reasonEl = adminList.querySelector(`[data-reason="${userId}"]`);
+      const raw = parseInt((sumEl?.value||'0'), 10);
+      const amount = isCredit ? raw : -raw;
+      if (!raw || raw <= 0) return showMessage('Введите сумму', true);
+      try{
+        const r = await fetch(`/api/admin/users/${userId}/credit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ amount, reason: reasonEl?.value||'' })
+        });
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error||'Ошибка изменения баланса');
+        showMessage('Баланс обновлён');
+        loadAdminUsers();
+      }catch(e){
+        showMessage(e.message, true);
+      }
+    }
+
+    adminSearchBtn?.addEventListener('click', loadAdminUsers);
+    adminRefreshBtn?.addEventListener('click', loadAdminUsers);
+    adminSearch?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadAdminUsers(); });
+
+    function showMessage(text, isError = false) {
+        messageBox.textContent = text;
+        messageBox.style.backgroundColor = isError ? '#c0392b' : '#bb0040';
+        messageBox.classList.add('show');
+        setTimeout(() => {
+            messageBox.classList.remove('show');
+        }, 3000);
+    }
+
+    function renderGames() {
+      const q = (searchInput.value || '').toLowerCase();
+      const src = currentCat === 'all' ? allGames : allGames.filter(g => g.category === currentCat);
+      const list = src.filter(g => g.name.toLowerCase().includes(q));
+      if (!list.length) {
+        gameListEl.innerHTML = '<p style="opacity:.8">Ничего не найдено</p>';
+        return;
+      }
+      gameListEl.innerHTML = list.map(game => `
+          <div class="game-item">
+            <h3>${game.name} (ID: ${game.id})</h3>
+            <img src="${game.banner_url || '/images/placeholder.png'}" class="banner-preview" id="banner-preview-${game.id}">
+            <form class="upload-form" onsubmit="uploadBanner(event, ${game.id})">
+              <input type="file" name="banner" accept="image/*" required>
+              <div style="display:flex; gap:8px;">
+                <button type="submit" class="upload-btn" style="flex:1">Загрузить баннер</button>
+                <button type="button" class="upload-btn" data-del-game="${game.id}" style="background:#2d2d2d">Удалить</button>
+              </div>
+            </form>
+          </div>
+        `).join('');
+    }
+
+    async function safeJson(response) {
+      const ct = response.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return response.json();
+      const text = await response.text();
+      try { return JSON.parse(text); } catch { return { error: text || 'Unexpected non-JSON response' }; }
+    }
+
+    // === Админ: Управление товарами ===
+    const itemsGameFilter = document.getElementById('items-game-filter');
+    const itemsStatusSel = document.getElementById('items-status');
+    const itemsSearchInput = document.getElementById('items-search');
+    const itemsRefreshBtn = document.getElementById('items-refresh');
+    const itemsBulkDeleteBtn = document.getElementById('items-bulk-delete');
+    const itemsListEl = document.getElementById('admin-items-list');
+    const itemsLoadMoreBtn = document.getElementById('items-load-more');
+
+    const itemsState = { limit: 30, offset: 0, selected: new Set(), lastLen: 0 };
+
+    function escHtml(s){
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function renderAdminItems(items, append = false){
+      if (!itemsListEl) return;
+      const cards = (items||[]).map(it => {
+        const img = it.image_url || it.photo_url || '/images/placeholder.png';
+        const title = escHtml(it.title || it.name || 'Без названия');
+        const price = Number.isFinite(it.price) ? it.price : '-';
+        const seller = escHtml(it.seller_nickname || String(it.seller_id||''));
+        const checked = itemsState.selected.has(String(it.id)) ? 'checked' : '';
+        return `
+          <div class="game-item" data-card-id="${it.id}" style="gap:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="checkbox" class="itm-chk" data-id="${it.id}" ${checked}>
+              <img src="${img}" alt="img" style="width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid #333;background:#2a2a2a">
+              <div style="flex:1">
+                <div style="font-weight:600;color:#fff">${title} <span style="opacity:.7">#${it.id}</span></div>
+                <div style="font-size:.9rem;color:#bdbdbd">Игра: <b>${it.game_id}</b> · Цена: <b>${price}</b> ₽ · Продавец: <b>${seller}</b> · Статус: <b>${escHtml(it.status||'')}</b></div>
+              </div>
+              <button class="upload-btn itm-del" data-id="${it.id}" style="width:auto;padding:8px 12px;background:#2d2d2d">Удалить</button>
+            </div>
+          </div>`;
+      }).join('');
+      if (!append) itemsListEl.innerHTML = '';
+      itemsListEl.insertAdjacentHTML('beforeend', cards || '<p style="opacity:.8">Товары не найдены</p>');
+
+      // Показать/скрыть кнопку догрузки в зависимости от последнего ответа
+      if (itemsLoadMoreBtn) itemsLoadMoreBtn.style.display = (itemsState.lastLen >= itemsState.limit) ? 'inline-block' : 'none';
+    }
+
+    async function loadAdminItems(reset = true){
+      const token = localStorage.getItem('token');
+      if (!token) { showMessage('Нужна авторизация админа', true); return; }
+      if (reset) { itemsState.offset = 0; itemsState.lastLen = 0; itemsState.selected.clear(); if (itemsLoadMoreBtn) itemsLoadMoreBtn.style.display = 'none'; }
+      const params = new URLSearchParams();
+      const gidRaw = (itemsGameFilter?.value||'').trim();
+      const qRaw = (itemsSearchInput?.value||'').trim();
+      const st = (itemsStatusSel?.value||'all').trim();
+      if (gidRaw) params.set('game_id', gidRaw);
+      if (qRaw) params.set('q', qRaw);
+      if (st) params.set('status', st);
+      params.set('limit', String(itemsState.limit));
+      params.set('offset', String(itemsState.offset));
+      try{
+        const r = await fetch(`/api/admin/items?${params.toString()}`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error||'Ошибка загрузки товаров');
+        const list = Array.isArray(data) ? data : [];
+        itemsState.lastLen = list.length;
+        itemsState.offset += list.length;
+        renderAdminItems(list, !reset);
+      }catch(e){
+        console.error(e);
+        showMessage(e.message, true);
+      }
+    }
+
+    async function deleteItemById(id, btnEl){
+      const token = localStorage.getItem('token');
+      if (!token) return showMessage('Нужна авторизация админа', true);
+      if (!confirm('Удалить товар? Действие необратимо.')) return;
+      const prev = btnEl?.textContent;
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Удаление...'; }
+      try{
+        const r = await fetch(`/api/admin/items/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error||'Не удалось удалить товар');
+        showMessage('Товар удалён');
+        // Обновим список
+        await loadAdminItems(true);
+      }catch(e){
+        console.error(e);
+        showMessage(e.message, true);
+      }finally{
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = prev; }
+      }
+    }
+
+    async function bulkDeleteSelected(){
+      const token = localStorage.getItem('token');
+      if (!token) return showMessage('Нужна авторизация админа', true);
+      const ids = Array.from(itemsState.selected.values()).map(x => parseInt(x, 10)).filter(n => Number.isFinite(n));
+      if (!ids.length) return showMessage('Не выбрано ни одного товара', true);
+      if (!confirm(`Удалить выбранные товары (${ids.length} шт.)? Действие необратимо.`)) return;
+      try{
+        const r = await fetch('/api/admin/items/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ ids })
+        });
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error||'Не удалось удалить товары');
+        const deleted = data.deleted || (data.ids?.length||0);
+        const skipped = data.skipped?.length || 0;
+        showMessage(`Удалено: ${deleted}. Пропущено: ${skipped}.`);
+        itemsState.selected.clear();
+        await loadAdminItems(true);
+      }catch(e){
+        console.error(e);
+        showMessage(e.message, true);
+      }
+    }
+
+    // Делегирование событий по списку товаров
+    itemsListEl?.addEventListener('change', (e)=>{
+      const chk = e.target.closest('.itm-chk');
+      if (!chk) return;
+      const id = chk.getAttribute('data-id');
+      if (!id) return;
+      if (chk.checked) itemsState.selected.add(String(id)); else itemsState.selected.delete(String(id));
+    });
+
+    itemsListEl?.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.itm-del');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      deleteItemById(id, btn);
+    });
+
+    // Обработчики фильтров/кнопок
+    itemsRefreshBtn?.addEventListener('click', ()=>loadAdminItems(true));
+    itemsLoadMoreBtn?.addEventListener('click', ()=>loadAdminItems(false));
+    itemsSearchInput?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadAdminItems(true); });
+    itemsStatusSel?.addEventListener('change', ()=>loadAdminItems(true));
+    itemsGameFilter?.addEventListener('change', ()=>loadAdminItems(true));
+    itemsBulkDeleteBtn?.addEventListener('click', bulkDeleteSelected);
+
+    async function loadGames() {
+      try {
+        const response = await fetch('/api/games');
+        if (!response.ok) throw new Error('Ошибка сети при загрузке игр.');
+        allGames = await safeJson(response);
+        if (!Array.isArray(allGames)) throw new Error(allGames.error || 'Некорректный ответ от сервера');
+        renderGames();
+        populateGameSelect();
+        gamesLoaded = true;
+        if (startImportBtn) startImportBtn.disabled = false;
+      } catch (error) {
+        console.error('Ошибка загрузки списка игр:', error);
+        gameListEl.innerHTML = `<p style=\"color: #e74c3c;\">${error.message}</p>`;
+      }
+    }
+
+    function populateGameSelect(){
+      // Заполняем оба селектора, если присутствуют
+      const sel1 = document.getElementById('import-target-game');
+      const sel2 = document.getElementById('playerok-target-game');
+      const sel3 = document.getElementById('items-game-filter');
+      if (sel1) {
+        const cur = sel1.value;
+        sel1.innerHTML = '<option value="">Выберите игру (опционально)</option>' +
+          allGames.map(g => `<option value="${g.id}">${g.name} (ID: ${g.id})</option>`).join('');
+        if (cur) sel1.value = cur;
+      }
+      if (sel2) {
+        const cur2 = sel2.value;
+        sel2.innerHTML = '<option value="">Выберите игру</option>' +
+          allGames.map(g => `<option value="${g.id}">${g.name} (ID: ${g.id})</option>`).join('');
+        if (cur2) sel2.value = cur2;
+      }
+      if (sel3) {
+        const cur3 = sel3.value;
+        sel3.innerHTML = '<option value="">Все игры</option>' +
+          allGames.map(g => `<option value="${g.id}">${g.name} (ID: ${g.id})</option>`).join('');
+        if (cur3) sel3.value = cur3;
+      }
+    }
+
+    // Делегирование на список игр для кнопки удаления
+    gameListEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-del-game]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-del-game');
+      if (!id) return;
+      deleteGame(id, btn);
+    });
+
+    async function deleteGame(gameId, btnEl){
+      const token = localStorage.getItem('token');
+      if (!token) return showMessage('Нужна авторизация админа', true);
+      if (!confirm('Удалить игру и её баннер? Действие необратимо.')) return;
+      const prevText = btnEl?.textContent;
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Удаление...'; }
+      try{
+        const r = await fetch(`/api/games/${gameId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error || 'Не удалось удалить игру');
+        // Уберём из локального массива и перерисуем
+        allGames = allGames.filter(g => String(g.id) !== String(gameId));
+        showMessage('Игра удалена');
+        renderGames();
+      }catch(e){
+        console.error(e);
+        showMessage(e.message, true);
+      }finally{
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = prevText; }
+      }
+    }
+
+    catFilters.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-cat]');
+      if (!btn) return;
+      currentCat = btn.dataset.cat;
+      [...catFilters.children].forEach(b => b.style.background = '#2d2d2d');
+      btn.style.background = '#bb0040';
+      renderGames();
+    });
+
+    searchInput.addEventListener('input', renderGames);
+
+    async function createGame(name, category) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('Нужна авторизация для создания игры', true);
+        return;
+      }
+      try {
+        const r = await fetch('/api/games', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ name, category })
+        });
+        const data = await safeJson(r);
+        if (!r.ok) throw new Error(data.error || 'Не удалось создать игру');
+        showMessage(`Игра "${data.name}" добавлена`);
+        allGames.push(data);
+        // если это мобильная — переключим фильтр на mobile
+        currentCat = category;
+        [...catFilters.children].forEach(b => b.style.background = '#2d2d2d');
+        const btn = catFilters.querySelector(`[data-cat="${category}"]`);
+        if (btn) btn.style.background = '#bb0040';
+        renderGames();
+        populateGameSelect();
+      } catch (e) {
+        showMessage(e.message, true);
+      }
+    }
+
+    document.getElementById('add-game-btn').addEventListener('click', () => {
+      const name = document.getElementById('new-game-name').value.trim();
+      const category = document.getElementById('new-game-cat').value;
+      if (!name) return showMessage('Введите название игры', true);
+      createGame(name, category);
+    });
+
+    document.getElementById('quick-add-br').addEventListener('click', () => {
+      createGame('Black Russia', 'mobile');
+    });
+
+    // ===== Импорт товаров из локальных папок (через webkitdirectory) =====
+    function groupByGameAndProduct(files){
+      // files: FileList со свойством webkitRelativePath
+      // Ожидаем: GameName/ProductFolder/(info.json|image.*)
+      const map = new Map(); // gameName -> Map(productFolder -> { infoFile, imageFile })
+      for (const f of files){
+        const rel = f.webkitRelativePath || f.name; // e.g.: Apex Legends/Sword01/info.json
+        const parts = rel.split('/');
+        if (parts.length < 3) continue;
+        const gameName = parts[0];
+        const productFolder = parts[1];
+        const fileName = parts.slice(2).join('/');
+        if (!gameName || !productFolder) continue;
+        if (!map.has(gameName)) map.set(gameName, new Map());
+        const prodMap = map.get(gameName);
+        if (!prodMap.has(productFolder)) prodMap.set(productFolder, {});
+        const entry = prodMap.get(productFolder);
+        if (/^info\.json$/i.test(fileName)) entry.infoFile = f;
+        if (/(\.png|\.jpg|\.jpeg|\.webp|\.gif|\.bmp|\.jfif|\.heic|\.heif|\.tiff?)$/i.test(fileName)) {
+          // берём первое подходящее изображение
+          if (!entry.imageFile) entry.imageFile = f;
+        }
+      }
+      return map;
+    }
+
+    async function ensureGameIdByName(name, defaultCategory){
+      // Ищем игру по имени в allGames, если нет — создаём
+      const existing = allGames.find(g => (g.name||'').toLowerCase() === name.toLowerCase());
+      if (existing) return existing.id;
+      const created = await createGameReturn(name, defaultCategory);
+      if (created) {
+        allGames.push(created);
+        return created.id;
+      }
+      throw new Error(`Не удалось создать игру: ${name}`);
+    }
+
+    async function createGameReturn(name, category){
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Нужна авторизация для создания игры');
+      const r = await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name, category })
+      });
+      const data = await safeJson(r);
+      if (!r.ok) throw new Error(data.error || 'Не удалось создать игру');
+      populateGameSelect();
+      return data; // ожидаем {id, name, category, ...}
+    }
+
+    async function createItem({ gameId, title, price, imageFile, description }){
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Нужна авторизация для добавления товара');
+      const fd = new FormData();
+      fd.append('game_id', String(gameId));
+      // Бэкенд ожидает name и desc, оба обязательны
+      fd.append('name', title);
+      fd.append('desc', (description && description.trim()) ? description : title);
+      fd.append('price', String(price));
+      // Поле файла должно называться 'photo'
+      if (imageFile) fd.append('photo', imageFile, imageFile.name);
+      const r = await fetch('/api/items', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+      const data = await safeJson(r);
+      if (!r.ok) throw new Error(data.error || 'Не удалось добавить товар');
+      return data;
+    }
+
+    // Помощники: нормализация цены и извлечение полей из meta (поддержка запятых, NBSP, price-объектов и разных ключей)
+    function normalizePrice(raw){
+      if (raw == null) return NaN;
+      // Если цена приходит объектом: { value|amount|price, currency }
+      if (typeof raw === 'object') {
+        const v = raw.value ?? raw.amount ?? raw.price ?? raw.sum ?? raw.val;
+        return normalizePrice(v);
+      }
+      if (typeof raw === 'number') return raw;
+      let s = String(raw).trim();
+      // Удаляем неразрывные пробелы и обычные пробелы
+      s = s.replace(/[\u00A0\s]+/g, '');
+      // Оставляем только цифры и разделители
+      s = s.replace(/[^0-9.,\-]/g, '');
+      // Определяем, что из разделителей десятичный
+      const hasComma = s.includes(',');
+      const hasDot = s.includes('.');
+      if (hasComma && hasDot) {
+        // Евро-формат: 1.234,56 → десятичный ','
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+          s = s.replace(/\./g, '');
+          s = s.replace(/,/g, '.');
+        } else {
+          // US-формат: 1,234.56 → десятичный '.'
+          s = s.replace(/,/g, '');
+        }
+      } else if (hasComma && !hasDot) {
+        // Если только запятая — считаем её десятичной, если после неё ровно 2-3 цифры; иначе убираем
+        const idx = s.lastIndexOf(',');
+        const frac = s.slice(idx + 1);
+        if (/^\d{1,3}$/.test(frac)) s = s.replace(/,/g, '.'); else s = s.replace(/,/g, '');
+      } else {
+        // Только точки или только цифры — оставляем как есть ('.' как десятичный)
+        // Также удалим лишние точки (оставим только первую слева)
+        const parts = s.split('.');
+        if (parts.length > 2) s = parts[0] + '.' + parts.slice(1).join('');
+      }
+      const n = Number(s);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function extractFields(meta){
+      const pick = (obj, keys) => {
+        for (const k of keys) if (obj[k] != null) return obj[k];
+        return undefined;
+      };
+      const title = String(
+        pick(meta, ['title','name','Title','Name','Название','название','product','item','productName']) || ''
+      ).trim();
+
+      let rawPrice = pick(meta, [
+        'price','cost','Price','Cost','Цена','цена','amount','value','sum','val','price_value','priceValue','priceRUB','price_rub','rub','RUB','priceUSD','price_usd','usd','USD'
+      ]);
+      // Если цена не найдена напрямую — проверим вложенные объекты { price: { value, currency } }
+      if (rawPrice == null) {
+        const pObj = pick(meta, ['pricing','payment','paymentInfo','sale','offer']);
+        if (pObj && typeof pObj === 'object') rawPrice = pick(pObj, ['price','value','amount','sum']);
+      }
+      const price = Math.round(normalizePrice(rawPrice));
+
+      const description = String(
+        pick(meta, ['description','desc','Description','Desc','описание','Описание']) || ''
+      ).trim();
+      return { title, price, description };
+    }
+
+    // Утилиты ретраев и логирования
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    async function attemptWithRetry(fn, retries = 2, baseDelayMs = 500) {
+      let lastErr;
+      for (let i = 0; i <= retries; i++) {
+        try { return await fn(); }
+        catch (e) {
+          lastErr = e;
+          if (i < retries) {
+            const wait = baseDelayMs * (i + 1);
+            console.warn(`Повтор попытки ${i+1}/${retries} через ${wait}мс:`, e?.message || e);
+            await sleep(wait);
+          }
+        }
+      }
+      throw lastErr;
+    }
+
+    function startLogCapture() {
+      const origErr = console.error;
+      const origWarn = console.warn;
+      const lines = [];
+      console.error = (...a) => { try { lines.push('[ERROR] ' + a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ')); } catch {} origErr(...a); };
+      console.warn = (...a) => { try { lines.push('[WARN] ' + a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ')); } catch {} origWarn(...a); };
+      return { stop(){ console.error = origErr; console.warn = origWarn; }, lines };
+    }
+
+    async function importPlayerOkWithRetries(payload, token, retries = 2) {
+      let lastError;
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) {
+          const delay = 700 * attempt;
+          playerokProgress.textContent = `Повтор ${attempt}/${retries}...`;
+          await sleep(delay);
+        }
+        try {
+          const r = await fetch('/api/import/playerok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await safeJson(r);
+          if (!r.ok) {
+            if (data && data.need_html && playerokHtmlWrap) {
+              playerokHtmlWrap.style.display = 'block';
+              throw new Error(data.error || 'Антибот-защита: вставьте HTML');
+            }
+            lastError = new Error(data.error || `Ошибка импорта (HTTP ${r.status})`);
+            // Ретраим только на серверных и 429
+            if (r.status >= 500 || r.status === 429) {
+              console.warn('Импорт PlayerOK: повтор после статуса', r.status);
+              continue;
+            }
+            throw lastError;
+          }
+          return data;
+        } catch (e) {
+          lastError = e;
+          console.error('Импорт PlayerOK: ошибка попытки', attempt + 1, e?.message || e);
+          if (attempt < retries) continue;
+          throw lastError;
+        }
+      }
+    }
+
+    // Группировка для режима импорта в выбранную игру: поддержка произвольной вложенности
+    function groupByProduct(files){
+      const prodMap = new Map(); // productKey (путь папки товара) -> { infoFile, imageFile }
+      const productKeys = [];
+      const fileList = Array.from(files || []);
+      // Pass 1: найти все info.json и завести записи
+      for (const f of fileList){
+        const rel = f.webkitRelativePath || f.name;
+        const norm = rel.replace(/\\/g, '/');
+        if (/\/(?:^|)info\.json$/i.test('/' + norm)){
+          const key = norm.slice(0, norm.toLowerCase().lastIndexOf('/info.json'));
+          if (key && !prodMap.has(key)) { prodMap.set(key, { infoFile: f, imageFile: null }); productKeys.push(key); }
+          else if (key) { const e = prodMap.get(key); if (!e.infoFile) e.infoFile = f; }
+        }
+      }
+      // Если ни одного info.json не обнаружено — fallback на старый метод (первый уровень как папка товара)
+      if (!productKeys.length){
+        const legacy = new Map();
+        for (const f of fileList){
+          const rel = (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+          const parts = rel.split('/');
+          if (parts.length < 2) continue;
+          const productFolder = parts[0];
+          const fileName = parts.slice(1).join('/');
+          if (!legacy.has(productFolder)) legacy.set(productFolder, {});
+          const entry = legacy.get(productFolder);
+          if (!entry.infoFile && /(^|\/)info\.json$/i.test(fileName)) entry.infoFile = f;
+          if (/(\.png|\.jpg|\.jpeg|\.webp|\.gif|\.bmp|\.jfif|\.heic|\.heif|\.tiff?)$/i.test(fileName)) { if (!entry.imageFile) entry.imageFile = f; }
+        }
+        return legacy;
+      }
+      // Pass 2: привязать изображения к ближайшей подходящей папке товара (по наидлиннейшему совпадающему префиксу)
+      // Отсортируем ключи по длине убыв.
+      productKeys.sort((a,b) => b.length - a.length);
+      for (const f of fileList){
+        const rel = (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+        if (!/(\.png|\.jpg|\.jpeg|\.webp|\.gif|\.bmp|\.jfif|\.heic|\.heif|\.tiff?)$/i.test(rel)) continue;
+        const key = productKeys.find(k => rel.startsWith(k + '/'));
+        if (!key) continue;
+        const entry = prodMap.get(key);
+        if (entry && !entry.imageFile) entry.imageFile = f;
+      }
+      return prodMap;
+    }
+
+    async function performImport(files){
+      if (!files || files.length === 0) { showMessage('Выберите папку с данными', true); return; }
+      const defaultCategory = importCatSel?.value || 'mobile';
+      let total = 0; let done = 0; let errors = 0;
+      const skipped = { noInfo: 0, noImage: 0, badPrice: 0, api: 0 };
+
+      const selectedGameId = (importTargetGame?.value || '').trim();
+      if (selectedGameId) {
+        // Режим: добавляем все товары в выбранную игру
+        const prodMap = groupByProduct(files);
+        const entries = Array.from(prodMap.entries()).filter(([, e]) => !!e.infoFile);
+        total = entries.length;
+        importProgress.textContent = total ? `0 / ${total}` : '';
+        for (const [folder, entry] of entries){
+          try{
+            if (!entry.infoFile) { skipped.noInfo++; continue; }
+            const txt = await entry.infoFile.text();
+            let meta = {};
+            try { meta = JSON.parse(txt); } catch (e) { throw new Error(`${folder}: некорректный JSON (${e.message})`); }
+            const { title, price, description } = extractFields(meta);
+            if (!title) throw new Error(`${folder}: отсутствует title/name`);
+            if (!Number.isFinite(price) || price <= 0) { skipped.badPrice++; throw new Error(`${folder}: некорректная цена`); }
+            if (!entry.imageFile) { skipped.noImage++; throw new Error(`${folder}: не найдено изображение`); }
+            const gameId = parseInt(selectedGameId, 10);
+            await attemptWithRetry(() => createItem({ gameId, title, price, imageFile: entry.imageFile, description }), 2, 600);
+            done++; importProgress.textContent = `${done} / ${total}`;
+          }catch(e){ errors++; skipped.api += /Ошибка|error|failed/i.test(String(e?.message||'')) ? 1 : 0; console.error('IMPORT ERR (selected game mode):', folder, e); }
+        }
+      } else {
+        // Режим: авто-определение игр по структуре
+        const map = groupByGameAndProduct(files);
+        for (const [, prodMap] of map) total += Array.from(prodMap.values()).filter(e=>e.infoFile).length;
+        importProgress.textContent = total ? `0 / ${total}` : '';
+        for (const [gameName, prodMap] of map){
+          for (const [folder, entry] of prodMap){
+            if (!entry.infoFile) { skipped.noInfo++; continue; }
+            try{
+              const txt = await entry.infoFile.text();
+              let meta = {};
+              try { meta = JSON.parse(txt); } catch (e) { throw new Error(`${gameName}/${folder}: некорректный JSON (${e.message})`); }
+              const { title, price, description } = extractFields(meta);
+              if (!title) throw new Error(`${gameName}/${folder}: отсутствует title/name`);
+              if (!Number.isFinite(price) || price <= 0) { skipped.badPrice++; throw new Error(`${gameName}/${folder}: некорректная цена`); }
+              if (!entry.imageFile) { skipped.noImage++; throw new Error(`${gameName}/${folder}: не найдено изображение`); }
+              const gameId = await attemptWithRetry(() => ensureGameIdByName(gameName, defaultCategory), 2, 600);
+              await attemptWithRetry(() => createItem({ gameId, title, price, imageFile: entry.imageFile, description }), 2, 600);
+              done++; importProgress.textContent = `${done} / ${total}`;
+            }catch(e){ errors++; skipped.api += /Ошибка|error|failed/i.test(String(e?.message||'')) ? 1 : 0; console.error('IMPORT ERR (auto game mode):', gameName, folder, e); }
+          }
+        }
+      }
+      if (total){
+        const summary = [];
+        if (errors) summary.push(`ошибок: ${errors}`);
+        if (skipped.noInfo) summary.push(`без info.json: ${skipped.noInfo}`);
+        if (skipped.noImage) summary.push(`без изображения: ${skipped.noImage}`);
+        if (skipped.badPrice) summary.push(`неверная цена: ${skipped.badPrice}`);
+        const suffix = summary.length ? `, ${summary.join(', ')}` : '';
+        showMessage(`Импорт: ${done}/${total} успешно${suffix}`, errors > 0);
+      }
+    }
+
+    startImportBtn?.addEventListener('click', async () => {
+      const files = dirPicker?.files;
+      startImportBtn.disabled = true; startImportBtn.textContent = 'Импорт...';
+      try { await performImport(files); }
+      finally { startImportBtn.disabled = false; startImportBtn.textContent = 'Начать импорт'; importProgress.textContent = ''; }
+    });
+
+    // ===== Импорт с PlayerOK =====
+    const playerokUrl = document.getElementById('playerok-url');
+    const playerokGame = document.getElementById('playerok-target-game');
+    const playerokLimit = document.getElementById('playerok-limit');
+    const playerokStart = document.getElementById('playerok-start');
+    const playerokProgress = document.getElementById('playerok-progress');
+    const playerokResult = document.getElementById('playerok-result');
+    const playerokHtmlWrap = document.getElementById('playerok-html-wrap');
+    const playerokHtml = document.getElementById('playerok-html');
+    const playerokToggleHtml = document.getElementById('playerok-toggle-html');
+    const playerokLogsWrap = document.getElementById('playerok-logs-wrap');
+    const playerokLogs = document.getElementById('playerok-logs');
+    const playerokDebugIgnore = document.getElementById('playerok-debug-ignore');
+
+    playerokToggleHtml?.addEventListener('click', () => {
+      if (!playerokHtmlWrap) return;
+      const isShown = playerokHtmlWrap.style.display !== 'none';
+      playerokHtmlWrap.style.display = isShown ? 'none' : 'block';
+    });
+
+    playerokStart?.addEventListener('click', async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return showMessage('Нужна авторизация админа', true);
+      const url = (playerokUrl?.value||'').trim();
+      const gameId = parseInt((playerokGame?.value||'').trim(), 10);
+      const limit = Math.min(Math.max(parseInt(playerokLimit?.value||'50', 10)||50, 1), 50);
+      const html = (playerokHtml?.value||'').trim();
+      if (!url) return showMessage('Введите URL PlayerOK', true);
+      if (!Number.isFinite(gameId) || gameId <= 0) return showMessage('Выберите игру для импорта', true);
+      playerokStart.disabled = true;
+      playerokStart.textContent = 'Импорт...';
+      playerokProgress.textContent = '';
+      playerokResult.innerHTML = '';
+      if (playerokLogsWrap) { playerokLogsWrap.style.display = 'none'; }
+      try {
+        const cap = startLogCapture();
+        let data;
+        try {
+          const dbg = !!(playerokDebugIgnore && playerokDebugIgnore.checked);
+          data = await importPlayerOkWithRetries({ url, game_id: gameId, limit, html: html || undefined, debug_ignore_existing: dbg ? 'true' : undefined }, token, 2);
+        } finally {
+          cap.stop();
+          if (playerokLogs) playerokLogs.textContent = (cap.lines || []).join('\n');
+          if (playerokLogsWrap) playerokLogsWrap.style.display = (cap.lines && cap.lines.length) ? 'block' : 'none';
+        }
+        const { createdCount = 0, totalFound = 0, processed = 0, errors = [], created = [], stats = {} } = data || {};
+        const statsLine = stats ? `; usedAlt=${stats.usedAlt||0}, skipExisting=${stats.skipExisting||0}, skipInRun=${stats.skipInRun||0}, dbDup=${stats.dbDup||0}` : '';
+        const dbgNote = (playerokDebugIgnore && playerokDebugIgnore.checked) ? ' [DEBUG: ignore_existing]' : '';
+        showMessage(`Импортировано: ${createdCount} из ${processed} (найдено: ${totalFound})${dbgNote}`);
+        const okList = created.map(c => `<div>✔ ${c.title} — ${c.price} ₽</div>`).join('');
+        const errList = errors.map(e => `<div style="color:#e57373">✖ ${e.title||'(нет названия)'} — ${e.error||'ошибка'}</div>`).join('');
+        const statsHtml = `<div style="color:#9e9e9e;margin-top:6px">Stats: ${statsLine.slice(2)}</div>`;
+        playerokResult.innerHTML = (okList || '') + statsHtml + (errList ? `<div style="margin-top:6px">${errList}</div>` : '');
+      } catch (e) {
+        console.error('PlayerOK import error:', e);
+        showMessage(e.message, true);
+      } finally {
+        playerokStart.disabled = false;
+        playerokStart.textContent = 'Импортировать';
+        playerokProgress.textContent = '';
+      }
+    });
+
+    async function uploadBanner(e, gameId) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      if (!token) {
+          showMessage('Для загрузки баннера необходимо авторизоваться.', true);
+          return;
+      }
+
+      const form = e.target;
+      const fileInput = form.querySelector('input[type="file"]');
+      const uploadBtn = form.querySelector('button[type="submit"]');
+      const originalText = uploadBtn.textContent;
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+          showMessage('Пожалуйста, выберите файл.', true);
+          return;
+      }
+      // Client-side size check (15MB)
+      const MAX_MB = 15;
+      const f = fileInput.files[0];
+      if (f.size > MAX_MB * 1024 * 1024) {
+          showMessage(`Файл слишком большой. Максимальный размер ${MAX_MB} МБ`, true);
+          return;
+      }
+
+      const formData = new FormData();
+      formData.append('banner', fileInput.files[0]);
+      
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Загрузка...';
+      
+      try {
+        const response = await fetch(`/api/games/${gameId}/banner`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const result = await safeJson(response);
+        if (!response.ok) {
+          throw new Error(result.error || 'Ошибка загрузки');
+        }
+        
+        showMessage('Баннер успешно загружен!');
+        document.getElementById(`banner-preview-${gameId}`).src = result.bannerUrl + '?' + new Date().getTime(); // Обновляем превью
+      } catch (error) {
+        showMessage(`Ошибка: ${error.message}`, true);
+        console.error('Ошибка загрузки баннера:', error);
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = originalText;
+        fileInput.value = ''; // Сбрасываем поле выбора файла
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{ loadGames(); loadAdminUsers(); loadAdminItems(true); });
+  </script>
+</body>
+</html>

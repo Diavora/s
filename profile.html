@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Профиль</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="style.css" id="main-style" />
+  <link rel="stylesheet" href="profile.css" />
+</head>
+<body>
+    <div id="app">
+        <main id="profile-page" class="page active">
+            <div class="profile-container">
+
+                <div class="profile-tabs-top">
+                    <button class="tab-btn active" data-tab="items">Мои товары</button>
+                    <button class="tab-btn" data-tab="purchases">Мои покупки</button>
+                    <button class="tab-btn" data-tab="sales">Мои продажи</button>
+                    <button class="tab-btn" data-tab="finance">Финансы</button>
+                </div>
+                <div class="logout-wrapper"><button id="logout-btn" class="logout-btn">Выйти</button></div>
+
+                <div class="profile-header">
+                    <div class="avatar-wrapper">
+                        <img src="./assets/default-avatar.png" alt="Аватар" id="profile-avatar">
+                        <label for="avatar-upload" class="avatar-edit-button">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="avatar-upload" accept="image/*" class="hidden">
+                    </div>
+                    <h2 id="profile-nickname">Загрузка...</h2>
+                    
+                </div>
+
+                <div class="balance-container">
+                    <div class="balance-box" id="balance-box">
+                        <span>Баланс</span>
+                        <strong id="profile-balance">0.00 ₽</strong>
+                    </div>
+                    <div class="balance-box" id="frozen-balance-box">
+                        <span>Заморожено</span>
+                        <strong id="profile-frozen-balance">0.00 ₽</strong>
+                    </div>
+                </div>
+
+                <div class="profile-content-container">
+                    <div id="items-content" class="tab-content active"></div>
+                    <div id="purchases-content" class="tab-content"></div>
+                    <div id="sales-content" class="tab-content"></div>
+                    <div id="finance-content" class="tab-content"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Finance Wizard Modal -->
+        <div id="finance-wizard-overlay" class="overlay">
+            <div class="modal-card finance-wizard">
+                <button class="close-btn" id="wizard-close-btn">&times;</button>
+                <div id="wizard-content"></div>
+            </div>
+        </div>
+      <!-- steps injected by JS -->
+    </div>
+  </div>
+
+  <!-- Модалка финанс -->
+  <div id="finance-modal" class="modal hidden">
+    <div class="modal-body">
+      <h3 id="finance-modal-title">Пополнить баланс</h3>
+      <form id="finance-form">
+        <input type="number" name="amount" placeholder="Сумма в ₽" required min="1" />
+        <button type="submit" class="accent-btn">Подтвердить</button>
+      </form>
+    </div>
+  </div>
+  <!-- Operation detail modal -->
+  <div id="op-modal" class="modal hidden">
+    <div class="modal-body" id="op-body"></div>
+  </div>
+  <!-- Wizard modal -->
+  <div id="wizard-modal" class="modal hidden">
+    <div class="modal-body wizard-body" id="wizard-body">
+      <!-- steps injected by JS -->
+    </div>
+  </div>
+    <div class="nav-wrap">
+      <svg class="nav-border" viewBox="0 0 400 60" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#bb0040"/>
+            <stop offset="100%" stop-color="#bb0040" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="border-path" d="M0,0 L400,0 L400,60 L0,60 Z" rx="25" ry="25" pathLength="1" stroke="url(#border-grad)" stroke-width="2" fill="none" />
+      </svg>
+      <nav class="bottom-nav">
+        <a href="index.html" class="nav-btn"><i class="fa-solid fa-layer-group"></i><span>Каталог</span></a>
+        <a href="index.html#sell" class="nav-btn"><i class="fa-solid fa-tag"></i><span>Продажа</span></a>
+        <a href="index.html#deals" class="nav-btn"><i class="fa-solid fa-handshake"></i><span>Сделки</span></a>
+        <a href="index.html#chats" class="nav-btn"><i class="fa-solid fa-comments"></i><span>Чаты</span></a>
+        <button class="nav-btn active"><i class="fas fa-user"></i><span>Профиль</span></button>
+      </nav>
+    </div>
+
+  <script src="profile.js"></script>
+</body>
+</html>
