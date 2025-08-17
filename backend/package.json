@@ -2,8 +2,12 @@
   "name": "game-store-backend",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "npm rebuild better-sqlite3 --update-binary"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
