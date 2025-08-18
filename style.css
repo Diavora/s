@@ -145,8 +145,23 @@
     overflow: auto;
     padding-top: 6px;
   }
-  .item-modal-neo .item-modal-header .title { font-size: 1.05rem; }
+  .item-modal-neo .item-modal-header .title { font-size: 1.05rem; text-align: center; width: 100%; }
   .item-modal-neo .accent-btn { padding: 10px 14px; }
+
+  /* Minimal UI: hide extras on phones */
+  .item-modal-neo .neo-media .side-stack,
+  .item-modal-neo .neo-info .chips,
+  .item-modal-neo .neo-info .desc,
+  .item-modal-neo .neo-info .faq-actions,
+  .item-modal-neo .item-modal-header .header-tools { display: none !important; }
+
+  /* Tighter media */
+  .item-modal-neo .neo-media { border: none; background: transparent; }
+  .item-modal-neo .neo-media img { height: 200px; border-radius: 10px; border:1px solid var(--border-color); }
+
+  /* Actions spacing */
+  .item-modal-neo .item-modal-actions { gap: 6px; }
+  .item-modal-neo .price-box .value { font-size: 1.2rem; }
 }
 
 /* Lock body scroll when modal open */

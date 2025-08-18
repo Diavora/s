@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const itemBuyBtn = document.getElementById('item-buy');
   const itemCloseBtn = document.getElementById('item-close');
   const itemShareBtn = document.getElementById('item-share');
+  const itemBackBtn = document.getElementById('item-back');
   const itemFavBtn = document.getElementById('item-fav');
   const shareTipEl = document.getElementById('share-tip');
   const favTipEl = document.getElementById('fav-tip');
@@ -1106,6 +1107,7 @@ function cleanTitle(s) {
     document.body.classList.remove('modal-open');
   };
   itemCloseBtn?.addEventListener('click', closeItemModal);
+  itemBackBtn?.addEventListener('click', closeItemModal);
   itemModal?.addEventListener('click', (e) => { if (e.target === itemModal) closeItemModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !itemModal.classList.contains('hidden')) closeItemModal(); });
 
