@@ -34,6 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const chosenImg = document.getElementById('chosen-img');
   const chosenTitle = document.getElementById('chosen-title');
   const changeGameBtn = document.getElementById('change-game');
+  const brServerField = document.getElementById('br-server-field');
+  const brServerSelect = document.getElementById('br-server-select');
+  // Photo uploader
+  const sellPhotoInput = document.getElementById('sell-photo');
+  const sellUploader = document.getElementById('sell-photo-uploader');
+  const sellDrop = sellUploader ? sellUploader.querySelector('.uploader-drop') : null;
+  const sellPreviewWrap = document.getElementById('sell-photo-preview-wrap');
+  const sellPreviewImg = document.getElementById('sell-photo-preview');
+  const sellPhotoClear = document.getElementById('sell-photo-clear');
 
   // Item modal DOM
   const itemModal = document.getElementById('item-modal');
@@ -44,6 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const itemPriceEl = document.getElementById('item-modal-price');
   const itemBuyBtn = document.getElementById('item-buy');
   const itemCloseBtn = document.getElementById('item-close');
+  const itemShareBtn = document.getElementById('item-share');
+  const itemFavBtn = document.getElementById('item-fav');
+  const shareTipEl = document.getElementById('share-tip');
+  const favTipEl = document.getElementById('fav-tip');
+  const howDealBtn = document.getElementById('item-how-deal');
+  const problemBtn = document.getElementById('item-problem');
+  const faqPanelDeal = document.getElementById('faq-panel-deal');
+  const faqPanelProblem = document.getElementById('faq-panel-problem');
   // Deals
   const dealsList = document.getElementById('deals-list');
   // Deal modal & help
@@ -89,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let chats = [];
   let activeChatId = null;
   let activePartner = { name: 'Выберите диалог', avatar: '' };
+  // Флаг, чтобы отличать нашу управляемую анимацию перехода по клику от переходов по истории/внешних изменений hash
+  let navAnimating = false;
   let chatPollTimer = null;
   const CHAT_POLL_MS = 4000;
   const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 минут — эвристика для "в сети"
@@ -109,8 +128,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* -------------------- UTIL -------------------- */
   const token = () => localStorage.getItem('token');
+  // Favorites helpers
+  const FAV_KEY = 'fav_items';
+  const getFavs = () => {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch { return []; }
+  };
+  const setFavs = (arr) => { try { localStorage.setItem(FAV_KEY, JSON.stringify(Array.from(new Set(arr)))); } catch {} };
+  const isFav = (id) => {
+    if (!id) return false; const list = getFavs(); return list.includes(String(id)) || list.includes(Number(id));
+  };
+  const toggleFav = (id) => {
+    if (!id) return false; const strId = String(id); const list = getFavs().map(String);
+    const idx = list.indexOf(strId);
+    if (idx >= 0) { list.splice(idx, 1); setFavs(list); return false; }
+    list.push(strId); setFavs(list); return true;
+  };
   const auth = () => !!token();
   const json = (body) => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // Inline tips helper
+  let tipTimer;
+  function showTip(el, text) {
+    if (!el) return;
+    if (typeof text === 'string') el.textContent = text;
+    el.classList.add('visible');
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+  }
 
 // Remove price artifacts appended by parsers in item titles
 // Examples handled: "Название - 500 ₽", "Название (1 200 руб.)", "Название 1200 RUB"
@@ -161,6 +205,19 @@ function cleanTitle(s) {
   // Помощник фолбэка для изображений
   const AV_PLACEHOLDER_SM = 'https://via.placeholder.com/40x40.png?text=U';
   const AV_PLACEHOLDER_XS = 'https://via.placeholder.com/28x28.png?text=U';
+
+  // Нормализация URL изображений: приводим путь к /uploads/... с прямыми слешами
+  function normalizeImageUrl(u) {
+    if (!u) return '';
+    let s = String(u).trim();
+    if (!s) return '';
+    if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:')) return s;
+    s = s.replace(/^\.?\/+/, '');       // убрать ./ и ведущие слеши
+    s = s.replace(/^public\//i, '');     // убрать public/
+    s = s.replace(/\\/g, '/');          // обратные слеши -> прямые
+    if (/^uploads\//i.test(s)) s = s.replace(/^uploads/i, 'uploads'); // Uploads -> uploads
+    return '/' + s;
+  }
 
   // Presence helpers
   function formatLastSeen(ts){
@@ -224,32 +281,60 @@ function cleanTitle(s) {
     if (!btn) return Promise.resolve();
     const icon = btn.querySelector('i');
     if (!icon) return Promise.resolve();
-    // Подмешаем цвет будущего пузырька, чтобы кружок визуально "становился" пузырьком
-    btn.style.setProperty('--lift-bg', colorForBtn(btn));
-    // Готовим закреплённый пузырёк: мгновенно переносим в целевую точку и прячем без анимаций
-    // (чтобы не было видимого "телепорта" из-под панели)
-    positionStickyBubble(btn, { instant: true, prehide: true });
-    if (stickyBubble) {
-      // Форсируем рефлоу, затем включаем переходы обратно (если они нужны позже)
-      // eslint-disable-next-line no-unused-expressions
-      void stickyBubble.offsetWidth;
-      stickyBubble.classList.remove('no-trans');
+    // На время подъёма скрываем закреплённый пузырёк, чтобы не мигал
+    if (typeof stickyBubble !== 'undefined' && stickyBubble) {
+      stickyBubble.style.opacity = '0';
     }
-    // Если уже играет анимация, перезапуск
-    btn.classList.remove('lifting');
-    // Форсируем рефлоу для перезапуска анимации
-    // eslint-disable-next-line no-unused-expressions
+    // Цвет для круга-иконки во время подъёма
+    btn.style.setProperty('--lift-bg', colorForBtn(btn));
+    // Форсируем перезапуск CSS-анимации
     void icon.offsetWidth;
     btn.classList.add('lifting');
     return new Promise((resolve) => {
       const cleanup = () => {
         btn.classList.remove('lifting');
-        // По завершении — просто плавно проявляем already-позиционированный пузырёк
-        if (stickyBubble) stickyBubble.style.opacity = '1';
+        if (stickyBubble) {
+          stickyBubble.classList.add('reveal-up');
+          stickyBubble.style.opacity = '1';
+          stickyBubble.addEventListener('animationend', () => stickyBubble.classList.remove('reveal-up'), { once: true });
+        }
         resolve();
       };
       icon.addEventListener('animationend', cleanup, { once: true });
     });
+
+  // Right-side FAQ buttons toggle right panels
+  function togglePanel(which) {
+    const isDeal = which === 'deal';
+    const dealHidden = faqPanelDeal?.hidden ?? true;
+    const probHidden = faqPanelProblem?.hidden ?? true;
+    // Если кликаем по уже открытой панели — закрыть её
+    if (isDeal && !dealHidden) {
+      faqPanelDeal.hidden = true;
+      howDealBtn?.classList.remove('active');
+      return;
+    }
+    if (!isDeal && !probHidden) {
+      faqPanelProblem.hidden = true;
+      problemBtn?.classList.remove('active');
+      return;
+    }
+    // Иначе открыть выбранную и закрыть другую
+    if (faqPanelDeal) faqPanelDeal.hidden = !isDeal;
+    if (faqPanelProblem) faqPanelProblem.hidden = isDeal;
+    howDealBtn?.classList.toggle('active', isDeal);
+    problemBtn?.classList.toggle('active', !isDeal);
+  }
+  howDealBtn?.addEventListener('click', () => togglePanel('deal'));
+  problemBtn?.addEventListener('click', () => togglePanel('problem'));
+
+  // Delegated fallback (in case buttons are re-rendered)
+  document.addEventListener('click', (e) => {
+    const d = e.target.closest('#item-how-deal');
+    if (d) { e.preventDefault(); togglePanel('deal'); return; }
+    const p = e.target.closest('#item-problem');
+    if (p) { e.preventDefault(); togglePanel('problem'); }
+  });
   };
 
   // --- Fancy nav bubble effect ---
@@ -327,6 +412,7 @@ function cleanTitle(s) {
       stickyBubble.innerHTML = '';
       if (icon) stickyBubble.appendChild(icon.cloneNode(true));
       stickyBubble.style.background = colorForBtn(btn);
+      if (prehide) stickyBubble.style.opacity = '0';
       stickyBubble.style.left = `${cx}px`;
       stickyBubble.style.top = `${cy}px`;
       if (instant) {
@@ -369,7 +455,8 @@ function cleanTitle(s) {
     // Header/info
     const statusMap = { pending: 'Ожидание', seller_confirmed: 'Подтверждено', completed: 'Завершена', dispute: 'Спор' };
     const roleLabel = deal.role === 'buyer' ? 'Покупатель' : 'Продавец';
-    const img = deal.item_photo ? `<img class="deal-thumb" src="${deal.item_photo}" alt="${deal.item_name || ''}">` : '';
+    const imgSrc = normalizeImageUrl(deal.item_photo || '');
+    const img = imgSrc ? `<img class="deal-thumb" src="${imgSrc}" alt="${deal.item_name || ''}" onerror="this.onerror=null;this.src='https://via.placeholder.com/120x90?text=IMG'">` : '';
     dealModalBody.innerHTML = `
       <div class="deal-modal-top">
         <div class="deal-modal-left">${img}</div>
@@ -498,8 +585,15 @@ function cleanTitle(s) {
       localStorage.setItem('token', res.token);
       hideAuth();
       if (intendedRoute) {
-        navigate(intendedRoute);
+        const target = intendedRoute;
         intendedRoute = null;
+        const currentHash = (window.location.hash || '').replace('#','');
+        if (currentHash === target) {
+          // Если hash уже указывает на защищённую страницу, ручной вызов навигации
+          navigate(target);
+        } else {
+          window.location.hash = target;
+        }
       }
     } catch (err) { authError.textContent = err.message; }
   });
@@ -509,6 +603,8 @@ function cleanTitle(s) {
     const h = (window.location.hash || '').replace('#','').trim();
     if (!h) return 'catalog';
     if (h === 'catalog-page') return 'catalog';
+    // Спец: страница товаров игры с id в hash
+    if (/^game-items-page(:\d+)?$/.test(h)) return 'game-items-page';
     return h;
   };
   const navigate = (id) => {
@@ -538,27 +634,51 @@ function cleanTitle(s) {
 
     if (targetId === 'deals') loadDeals();
     if (targetId === 'chats') loadChats();
+    if (targetId === 'game-items-page') {
+      const h = (window.location.hash || '').replace('#','').trim();
+      const m = h.match(/^game-items-page:(\d+)/);
+      if (m && m[1]) {
+        showItemsForGame(m[1]);
+      } else if (h === 'game-items-page') {
+        window.location.hash = 'catalog';
+      }
+    }
   };
 
-  navBtns.forEach(b => b.addEventListener('click', async (e) => { 
-    e.preventDefault(); 
+  navBtns.forEach(b => b.addEventListener('click', async (e) => {
+    e.preventDefault();
     const target = b.dataset.target;
     if (!target) return;
+    // Если уже активна — не перезапускаем анимации
+    const isAlreadyActive = b.classList.contains('active');
     // Спец-логика для профиля: уважаем авторизацию
     if (target === 'profile') {
-      // Если не авторизован — сразу показываем окно входа без подсветки и анимации
-      if (!auth()) {
+      if (!auth()) { // не авторизован — показываем логин
         intendedRoute = 'profile';
         showAuth();
         return;
       }
-      // Авторизован — делаем красивую анимацию и переходим на profile.html
+      if (isAlreadyActive) { window.location.href = 'profile.html'; return; }
+      // Авторизован — красивая анимация и переход на profile.html
+      navAnimating = true;
       navBtns.forEach(x => x.classList.toggle('active', x === b));
+      // Предварительное позиционирование закреплённого пузырька в нужную точку и скрытие
+      positionStickyBubble(b, { instant: true, prehide: true });
       await liftIconFromButton(b);
+      navAnimating = false;
       window.location.href = 'profile.html';
       return;
     }
+
+    // Обычные вкладки
+    if (isAlreadyActive) return;
+    navAnimating = true;
+    navBtns.forEach(x => x.classList.toggle('active', x === b));
+    positionStickyBubble(b, { instant: true, prehide: true });
+    await liftIconFromButton(b);
+    // hash поменяем после подъёма, чтобы sticky аккуратно проявился уже в целевой точке
     window.location.hash = target;
+    // заметка: флаг сбросим в hashchange обработчике
   }));
 
   // Первичная навигация по hash (например, из profile.html приходим с #deals)
@@ -574,8 +694,15 @@ function cleanTitle(s) {
     navigate(getTargetFromHash());
     const activeBtn = document.querySelector('.bottom-nav .nav-btn.active');
     if (activeBtn) {
-      // Реальный кружок уезжает вверх, по окончании появится закреплённый пузырёк
-      liftIconFromButton(activeBtn);
+      // На изменение hash только мгновенно переставляем закреплённый пузырёк без новой анимации подъёма
+      positionStickyBubble(activeBtn, { instant: true });
+      if (navAnimating && typeof stickyBubble !== 'undefined' && stickyBubble) {
+        // Возвращаем видимость, завершаем сценарий клика
+        stickyBubble.classList.add('reveal-up');
+        stickyBubble.style.opacity = '1';
+        stickyBubble.addEventListener('animationend', () => stickyBubble.classList.remove('reveal-up'), { once: true });
+        navAnimating = false;
+      }
     }
   });
   window.addEventListener('resize', () => {
@@ -907,7 +1034,7 @@ function cleanTitle(s) {
   /* -------------------- CATALOG -------------------- */
   const gameCard = (g) => {
     const bannerHtml = g.banner_url
-      ? `<img src="${g.banner_url}" alt="${g.name}" class="game-banner">`
+      ? `<img src="${normalizeImageUrl(g.banner_url)}" alt="${g.name}" class="game-banner" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x150?text=Banner'">`
       : '<div class="game-banner-placeholder"></div>';
 
     return `
@@ -922,23 +1049,51 @@ function cleanTitle(s) {
   const itemCard = (i) => `
   <div class="shop-item" data-id="${i.id || ''}" data-seller="${i.seller_nickname || i.seller_id || ''}">
     <div class="thumb-wrap">
-      <img class="thumb" src="${i.image_url || 'https://via.placeholder.com/300x200?text=Item'}" alt="${i.title}">
+      <img class="thumb" src="${normalizeImageUrl(i.image_url) || 'https://via.placeholder.com/300x200?text=Item'}" alt="${i.title}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x200?text=IMG'">
       <span class="badge-price">${i.price} ₽</span>
     </div>
     <div class="meta">
       <h4 class="title">${cleanTitle(i.title)}</h4>
       ${i.seller_nickname ? `<span class="seller">${i.seller_nickname}</span>` : ''}
+      ${i.server ? `<div class="extra">Сервер: ${escapeHtml(i.server)}</div>` : ''}
     </div>
   </div>`;
 
   // Item modal logic
   const openItemModal = (item) => {
     currentItem = item;
-    if (itemImgEl) itemImgEl.src = item.image_url || 'https://via.placeholder.com/600x360?text=No+Image';
+    if (itemImgEl) {
+      itemImgEl.onerror = () => { itemImgEl.onerror = null; itemImgEl.src = 'https://via.placeholder.com/600x360?text=IMG'; };
+      itemImgEl.src = normalizeImageUrl(item.image_url) || 'https://via.placeholder.com/600x360?text=IMG';
+    }
     if (itemNameEl) itemNameEl.textContent = cleanTitle(item.title || 'Товар');
-    if (itemDescEl) itemDescEl.textContent = item.description || item.desc || 'Описание отсутствует';
+    if (itemDescEl) {
+      const baseDesc = item.description || item.desc || 'Нет подробного описания. Задайте вопрос продавцу — он ответит быстрее всего.';
+      itemDescEl.textContent = baseDesc + (item.server ? `\nСервер: ${item.server}` : '');
+    }
     if (itemSellerEl) itemSellerEl.textContent = item.seller_nickname ? `Продавец: ${item.seller_nickname}` : '';
     if (itemPriceEl) itemPriceEl.textContent = `${item.price} ₽`;
+    // Sync fav state and icon
+    if (itemFavBtn) {
+      const active = isFav(item?.id);
+      itemFavBtn.classList.toggle('fav-active', active);
+      const icon = itemFavBtn.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-regular', !active);
+        icon.classList.toggle('fa-solid', active);
+      }
+    }
+    // Reset right FAQ panels/buttons
+    try {
+      const deal = document.getElementById('faq-panel-deal');
+      const prob = document.getElementById('faq-panel-problem');
+      if (deal) deal.hidden = true;
+      if (prob) prob.hidden = true;
+      document.getElementById('item-how-deal')?.classList.remove('active');
+      document.getElementById('item-problem')?.classList.remove('active');
+    } catch {}
+    // Заблокируем прокрутку фона
+    document.body.classList.add('modal-open');
     itemModal.classList.add('active');
     itemModal.classList.remove('hidden');
   };
@@ -947,10 +1102,46 @@ function cleanTitle(s) {
     // match overlay transition
     setTimeout(() => itemModal.classList.add('hidden'), 250);
     currentItem = null;
+    // Вернём прокрутку
+    document.body.classList.remove('modal-open');
   };
   itemCloseBtn?.addEventListener('click', closeItemModal);
   itemModal?.addEventListener('click', (e) => { if (e.target === itemModal) closeItemModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !itemModal.classList.contains('hidden')) closeItemModal(); });
+
+  // Share current page or copy link
+  itemShareBtn?.addEventListener('click', async () => {
+    const url = window.location.href;
+    const title = itemNameEl?.textContent || 'Товар';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+        showTip(shareTipEl);
+      } else if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+        showTip(shareTipEl);
+      } else {
+        // Фолбэк: текстовое поле
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        showTip(shareTipEl);
+      }
+    } catch(e){ showToast('Не удалось поделиться', 'error'); }
+  });
+
+  // Toggle favorites
+  itemFavBtn?.addEventListener('click', () => {
+    if (!currentItem || !currentItem.id) return showToast('Товар не выбран', 'error');
+    const active = toggleFav(currentItem.id);
+    itemFavBtn.classList.toggle('fav-active', active);
+    const icon = itemFavBtn.querySelector('i');
+    if (icon) {
+      icon.classList.toggle('fa-regular', !active);
+      icon.classList.toggle('fa-solid', active);
+    }
+    showTip(favTipEl, active ? 'Добавлено в избранное' : 'Удалено из избранного');
+  });
   itemBuyBtn?.addEventListener('click', async () => {
     if (!auth()) return showAuth();
     if (!currentItem || !currentItem.id) return showToast('Товар не выбран', 'error');
@@ -1001,7 +1192,7 @@ function cleanTitle(s) {
 
   // Toasts
   const toastRoot = document.getElementById('toast-root');
-  const showToast = (msg, type = 'success', timeout = 4000) => {
+  const showToast = (msg, type = 'success', timeout = 4000, imageUrl = null) => {
     if (!toastRoot) return alert(msg);
     const el = document.createElement('div');
     el.className = `toast ${type}`;
@@ -1011,8 +1202,12 @@ function cleanTitle(s) {
     // progress bar duration via CSS variable
     el.style.setProperty('--toast-life', `${timeout}ms`);
 
+    // Optional image thumbnail support
+    const imgSrc = imageUrl ? normalizeImageUrl(imageUrl) : '';
+    const thumb = imgSrc ? `<img class="thumb" src="${imgSrc}" alt="" onerror="this.style.display='none'">` : '';
     el.innerHTML = `
       <span class="icon">${type === 'success' ? '✅' : '⚠️'}</span>
+      ${thumb}
       <span class="msg">${msg}</span>
       <button class="close" aria-label="Закрыть уведомление">✖</button>
       ${timeout ? '<span class="progress" aria-hidden="true"></span>' : ''}
@@ -1054,20 +1249,32 @@ function cleanTitle(s) {
     tabContainer.innerHTML = toShow.map(gameCard).join('');
     showAllBtn.style.display = many && !showAll ? 'block' : 'none';
     showLessBtn.style.display = many && showAll ? 'block' : 'none';
+
   };
 
   const setupTabs = () => {
-    renderTab('pc'); // default
+    // Initial active: prefer button with data-category="pc"
+    const btnPc = [...tabButtons].find(b => b.dataset.category === 'pc') || tabButtons[0];
+    if (btnPc) tabButtons.forEach(b => b.classList.toggle('active', b === btnPc));
+    renderTab('pc'); // default content
+
     tabButtons.forEach(t => t.addEventListener('click', () => {
-      tabButtons.forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
       // при смене вкладки очистим строку поиска
       if (searchInput) searchInput.value = '';
+      // toggle active class between tabs
+      tabButtons.forEach(b => b.classList.remove('active'));
+      t.classList.add('active');
       renderTab(t.dataset.category);
     }));
 
-    showAllBtn.addEventListener('click', () => renderTab(document.querySelector('.tab-button.active').dataset.category, true));
-    showLessBtn.addEventListener('click', () => renderTab(document.querySelector('.tab-button.active').dataset.category, false));
+    showAllBtn.addEventListener('click', () => {
+      const activeCat = document.querySelector('.tab-button.active')?.dataset.category || 'pc';
+      renderTab(activeCat, true);
+    });
+    showLessBtn.addEventListener('click', () => {
+      const activeCat = document.querySelector('.tab-button.active')?.dataset.category || 'pc';
+      renderTab(activeCat, false);
+    });
   };
 
   const showItemsForGame = async (gameId, gameName) => {
@@ -1081,21 +1288,33 @@ function cleanTitle(s) {
       const items = await res.json();
 
       const itemsHTML = items.length ? items.map(itemCard).join('') : '<p class="empty-list-msg">Для этой игры пока нет товаров.</p>';
+      // Если не передано имя игры — попытаемся взять из кеша игр
+      if (!gameName) {
+        const findById = (arr) => (arr || []).find(g => String(g.id) === String(gameId));
+        const g = (fullGameLists && (findById(fullGameLists.pc) || findById(fullGameLists.mobile) || findById(fullGameLists.apps))) || null;
+        gameName = g?.name || 'Товары игры';
+      }
+
       itemsContainer.innerHTML = `
         <div class="items-header">
-          <button id="back-to-catalog" class="back-btn"><i class="fas fa-arrow-left"></i> ${gameName}</button>
+          <button id="back-to-catalog" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Назад</button>
+          <h2>${gameName}</h2>
         </div>
         <div class="card-grid">${itemsHTML}</div>
       `;
 
-      navigate('game-items-page');
+      // Установим hash с id игры
+      const desiredHash = `game-items-page:${gameId}`;
+      if ((window.location.hash || '').replace('#','') !== desiredHash) {
+        window.location.hash = desiredHash;
+      }
 
-      document.getElementById('back-to-catalog').addEventListener('click', () => {
-        navigate('catalog');
-        itemsContainer.innerHTML = ''; // Clear content after leaving
+      // Привяжем обработчики
+      const backBtn = document.getElementById('back-to-catalog');
+      backBtn?.addEventListener('click', () => {
+        window.location.hash = 'catalog';
+        itemsContainer.innerHTML = '';
       });
-
-      // Bind clicks for this list
       const grid = itemsContainer.querySelector('.card-grid');
       bindItemGrid(grid, () => items);
 
@@ -1130,6 +1349,44 @@ function cleanTitle(s) {
   });
 
   /* -------------------- SELL -------------------- */
+  // Black Russia servers list
+  const BR_SERVERS = [
+    'Red','Green','Blue','Yellow','Orange','Purple','Lime','Pink','Cherry','Black','Indigo','White','Magenta','Crimson','Gold','Azure','Platinum','Aqua','Gray','Ice','Chilli','Choco','Moscow','SPB','UFA','Sochi','Kazan','Samara','Rostov','Anapa','EKB','Krasnodar','Arzamas','Novosibirsk','Grozny','Saratov','Omsk','Irkutsk','Volgograd','Voronezh','Belgorod','Makhachkala','Vladikavkaz','Vladivostok','Kaliningrad','Chelyabinsk','Krasnoyarsk','Cheboksary','Khabarovsk','Perm','Tula','Ryazan','Murmansk','Penza','Kursk','Arkhangelsk','Orenburg','Kirov','Kemerovo','Tyumen','Tolyatti','Ivanovo','Stavropol','Smolensk','Pskov','Bryansk','Orel','Yaroslavl','Barnaul','Lipetsk','Ulyanovsk','Yakutsk','Tambov','Bratsk','Astrakhan','Chita','Kostroma','Vladimir','Kaluga','Novgorod','Taganrog','Vologda','Tver','Tomsk','Izhevsk','Surgut','Podolsk','Magadan','Cherepovets'
+  ];
+
+  function ensureBrServersPopulated(){
+    if (!brServerSelect) return;
+    if (brServerSelect.options.length > 0) return;
+    const frag = document.createDocumentFragment();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Выберите сервер';
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    frag.appendChild(placeholder);
+    BR_SERVERS.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      frag.appendChild(opt);
+    });
+    brServerSelect.appendChild(frag);
+  }
+
+  function toggleBrServer(gameName){
+    const isBR = (gameName || '').toLowerCase().includes('black russia');
+    if (!brServerField || !brServerSelect) return;
+    if (isBR){
+      ensureBrServersPopulated();
+      brServerField.classList.remove('hidden');
+      brServerSelect.required = true;
+    } else {
+      brServerField.classList.add('hidden');
+      brServerSelect.required = false;
+      brServerSelect.selectedIndex = 0; // сброс к placeholder (если есть)
+    }
+  }
+
   const gameSelectRender = (list) => {
     // Используем тот же шаблон, что и в каталоге, для единообразия карточек
     sellGameList.innerHTML = list.map(gameCard).join('');
@@ -1148,6 +1405,7 @@ function cleanTitle(s) {
     selectedGame = { id: card.dataset.id, name: card.dataset.name, image_url: imgSrc };
     chosenImg.src = selectedGame.image_url || '';
     chosenTitle.textContent = selectedGame.name;
+    toggleBrServer(selectedGame.name);
     sellSelect.classList.add('hidden');
     sellFormWrap.classList.remove('hidden');
   });
@@ -1155,26 +1413,90 @@ function cleanTitle(s) {
   changeGameBtn?.addEventListener('click', () => {
     selectedGame = null;
     sellForm.reset();
+    toggleBrServer('');
     sellFormWrap.classList.add('hidden');
     sellSelect.classList.remove('hidden');
+  });
+
+  // --- Photo uploader: preview + drag&drop ---
+  let currentPreviewUrl = '';
+  const MAX_MB = 5;
+  function setPreview(file){
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Можно загружать только изображения', 'error'); return; }
+    if (file.size > MAX_MB * 1024 * 1024) { showToast(`Размер файла не должен превышать ${MAX_MB} МБ`, 'error'); return; }
+    if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+    currentPreviewUrl = URL.createObjectURL(file);
+    if (sellPreviewImg) sellPreviewImg.src = currentPreviewUrl;
+    sellPreviewWrap?.classList.remove('hidden');
+    sellDrop?.classList.add('hidden');
+  }
+  function clearPreview(){
+    if (currentPreviewUrl) { URL.revokeObjectURL(currentPreviewUrl); currentPreviewUrl = ''; }
+    if (sellPreviewImg) sellPreviewImg.removeAttribute('src');
+    sellPreviewWrap?.classList.add('hidden');
+    sellDrop?.classList.remove('hidden');
+    if (sellPhotoInput) sellPhotoInput.value = '';
+  }
+  sellPhotoInput?.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) setPreview(f);
+  });
+  sellPhotoClear?.addEventListener('click', clearPreview);
+  sellDrop?.addEventListener('click', () => sellPhotoInput?.click());
+  ['dragenter','dragover'].forEach(ev => sellUploader?.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation(); sellUploader.classList.add('dragover');
+  }));
+  ;['dragleave','dragend','drop'].forEach(ev => sellUploader?.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation(); sellUploader.classList.remove('dragover');
+  }));
+  sellUploader?.addEventListener('drop', (e) => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) { setPreview(file); if (sellPhotoInput) sellPhotoInput.files = e.dataTransfer.files; }
   });
 
   sellForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!auth()) return showAuth();
     if (!selectedGame) return showToast('Выберите игру', 'error');
+    if (!sellPhotoInput || !sellPhotoInput.files || sellPhotoInput.files.length === 0) {
+      return showToast('Добавьте фото товара', 'error');
+    }
     const fd = new FormData(sellForm);
+    // Инпут файла вне формы, добавляем явно
+    if (sellPhotoInput && sellPhotoInput.files && sellPhotoInput.files[0]) {
+      fd.append('photo', sellPhotoInput.files[0]);
+    }
     fd.append('game_id', selectedGame.id);
+    // Обязательный выбор сервера для Black Russia
+    if ((selectedGame.name || '').toLowerCase() === 'black russia') {
+      const server = brServerSelect ? brServerSelect.value : '';
+      if (!server) return showToast('Выберите сервер Black Russia', 'error');
+      fd.append('server', server);
+    }
     try {
       const r = await fetch('/api/items', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token() }, body: fd });
-      if (!r.ok) throw new Error('Не удалось выставить');
-      const newItem = await r.json();
-      allItems.unshift(newItem);
-      allItemsBlock.innerHTML = allItems.map(itemCard).join('');
-      bindItemGrid(allItemsBlock);
-      changeGameBtn.click();
-      showToast('Товар добавлен', 'success');
-    } catch (err) { showToast(err.message || 'Ошибка запроса', 'error'); }
+      let data = null;
+      try { data = await r.json(); } catch (_) { data = null; }
+      if (r.status === 201 || r.ok) {
+        const newItem = data || {};
+        allItems.unshift(newItem);
+        allItemsBlock.innerHTML = allItems.map(itemCard).join('');
+        bindItemGrid(allItemsBlock);
+        changeGameBtn.click();
+        showToast('Товар добавлен', 'success');
+      } else if (r.status === 409) {
+        // Дружелюбное сообщение о дубликате: подскажем пользователю, как изменить название
+        const thumb = selectedGame?.image_url || '';
+        const msg = data?.error || 'Похожий товар уже существует.';
+        showToast(`${msg} Переименуйте объявление: добавьте уточнение (сервер, уровень, характеристики), чтобы отличалось.`, 'error', 7000, thumb);
+      } else {
+        const msg = (data && data.error) ? data.error : 'Не удалось выставить';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      showToast(err.message || 'Ошибка запроса', 'error');
+    }
   });
 
   /* -------------------- INITIAL LOAD -------------------- */

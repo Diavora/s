@@ -109,12 +109,14 @@ if (!gCount) {
 }
 
 // Ensure uploads folder exists with robust fallback logic.
+// Prefer project directory on Windows to avoid pointing to C:\data by accident.
 // We try candidates in order and pick the first that is writable for creating 'uploads/'.
+const isWin = process.platform === 'win32';
 const uploadBaseCandidates = [
   process.env.UPLOADS_DIR,
-  process.env.RENDER_DISK,
-  '/data',
   __dirname,
+  process.env.RENDER_DISK,
+  isWin ? null : '/data',
 ].filter(Boolean);
 
 let uploadsBase = __dirname;
@@ -132,6 +134,7 @@ for (const base of uploadBaseCandidates) {
 }
 const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
+try { console.log('[uploads] base=', uploadsBase, 'dir=', uploadsDir); } catch(_) {}
 
 // Global helper: remove/mask bottom-right PlayerOK watermark ("Playerok")
 // Strategy: compute a rectangle at bottom-right, sample an area above it, blur and overlay
@@ -170,6 +173,93 @@ async function removePlayerOkWatermark(inputBuf) {
   } catch (_) {
     return inputBuf;
   }
+}
+
+// ---- Title/price normalization helpers (global) ----
+// Normalize media URL to a consistent web path:
+// - keep absolute (http/https, data:) as is
+// - drop optional leading './' or '/'
+// - strip optional 'public/' prefix
+// - unify first segment 'uploads' casing to lower ('Uploads' -> 'uploads')
+// - convert backslashes to forward slashes
+// - ensure leading '/'
+function normalizeMediaUrl(u) {
+  let s = (u || '').toString().trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) || s.startsWith('data:')) return s;
+  s = s.replace(/^\.?\/+/, '');
+  s = s.replace(/^public\//i, '');
+  s = s.replace(/\\/g, '/');
+  if (/^uploads\//i.test(s)) s = s.replace(/^uploads/i, 'uploads');
+  return '/' + s;
+}
+
+function removePriceTokens(input) {
+  let t = (input || '').toString();
+  // remove price in parentheses/brackets at end
+  t = t.replace(/\s*[\(\[]?\s*\d[\d\s.,]{0,9}\s*(?:₽|р(?:уб(?:\.|лей|ля)?|\b)|RUB\b|RUR\b)\s*[\)\]]?\s*$/gi, '');
+  // remove trailing dash + price
+  t = t.replace(/\s*[-–—]\s*\d[\d\s.,]{0,9}\s*(?:₽|р(?:уб(?:\.|лей|ля)?|\b)|RUB\b|RUR\b)\s*$/gi, '');
+  // remove standalone price tokens globally (start/middle/end)
+  const priceToken = /(?:^|[\s\-–—\(\[])(?:от\s*)?\d[\d\s.,]{0,9}\s*(?:₽|р(?:уб(?:\.|лей|ля)?|\b)|RUB\b|RUR\b)(?=$|[\s\)\]\-–—,.:;]|[A-Za-zА-Яа-я])/gi;
+  let prev;
+  do { prev = t; t = t.replace(priceToken, ' '); } while (t !== prev);
+  // remove orphan currency symbols without digits around
+  t = t.replace(/(?:^|[\s\-–—\(\[])(?:₽|р(?:уб(?:\.|лей|ля)?|\b)|RUB\b|RUR\b)(?=$|[\s\)\]\-–—,.:;]|\D)/gi, ' ');
+  // trim separators created by removals
+  t = t.replace(/\s*[-–—,:;]+\s*$/g, '');
+  t = t.replace(/^[-–—,:;]+\s*/g, '');
+  return t;
+}
+
+// Clean title for display: strip discounts/promo words AND any price tokens
+function cleanupTitle(raw) {
+  let t = (raw || '').toString();
+  // remove control chars
+  t = t.replace(/[\u0000-\u001F\u007F]/g, ' ');
+  // strip obvious code blocks
+  t = t.replace(/try\s*\{[\s\S]*?\}\s*catch\s*\([\s\S]*?\)\s*\{[\s\S]*?\}/gi, ' ');
+  t = t.replace(/function\b[\s\S]{0,600}?\}/gi, ' ');
+  // strip common code identifiers
+  t = t.replace(/\b(document\.cookie|window\.[a-zA-Z_][\w]*|setCookie|getCookie|deleteCookie|reloadPage)\b/gi, ' ');
+  // remove leftover code punctuation
+  t = t.replace(/[{};<>]/g, ' ');
+  // normalize spaces
+  t = t.replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  // remove leading numeric token (assumed price) at the very start
+  const leadingNum = /^(?:от\s*)?\d[\d\s.,]{0,9}\s*(?:k|к|тыс\.?)*\s*(?:₽|р(?:уб(?:\.|лей|ля)?|\b)|RUB\b|RUR\b)?(?=\s|[A-Za-zА-Яа-я]|$)/i;
+  while (leadingNum.test(t)) {
+    t = t.replace(leadingNum, ' ').trimStart();
+  }
+  // remove percent-based discount tokens
+  t = t.replace(/[\(\[\-–—\s]*[-+−]?\d{1,3}\s*%[\)\]\s]*/g, ' ');
+  // remove common discount words
+  t = t.replace(/\b(скидк[а-я]*|распродажа|акци[яий]|sale|off)\b/gi, ' ');
+  // remove stray separators
+  t = t.replace(/[|\/•&]+/g, ' ');
+  // remove any currency/price tokens anywhere
+  t = removePriceTokens(t);
+  // cleanup brackets and extra spaces
+  t = t.replace(/[\(\)\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+  // collapse excessive punctuation
+  t = t.replace(/[\-–—]{2,}/g, '—').replace(/[,.;:]{2,}/g, m => m[0]);
+  // final fallback if became empty or too short
+  if (!t || t.replace(/[^\p{L}\p{N}]+/gu, '').length < 2) {
+    t = 'Товар';
+  }
+  return t;
+}
+
+// Normalize title for deduplication
+function normalizeTitleForDedup(raw) {
+  let t = cleanupTitle(raw).toLowerCase();
+  // remove trailing long numeric or code-like suffixes
+  t = t.replace(/(?:\s*[\-–—#№]\s*\d{4,})+$/g, '').trim();
+  // remove trailing pure numeric suffixes
+  t = t.replace(/\s+\d{4,}$/g, '').trim();
+  t = t.replace(/\s+/g, ' ').trim();
+  return t;
 }
 
 const app = express();
@@ -654,7 +744,7 @@ app.post('/api/items', auth, (req, res) => {
       }
 
       const created = db.prepare('SELECT * FROM items WHERE id = ?').get(info.lastInsertRowid);
-      const response = { ...created, image_url: created.photo_url, title: created.name };
+      const response = { ...created, image_url: normalizeMediaUrl(created.photo_url), title: created.name };
       res.status(201).json(response);
     } catch (e) {
       console.error('Create item error:', e);
@@ -1547,7 +1637,21 @@ app.post('/api/finance/withdraw', auth, (req, res) => {
 // --- Public Catalog API ---
 app.get('/api/games', (req, res) => {
   const games = db.prepare('SELECT * FROM games ORDER BY name').all();
-  res.json(games);
+  const mapped = games.map(g => {
+    let b = (g.banner_url || '').toString().trim();
+    if (b) {
+      if (/^https?:\/\//i.test(b) || b.startsWith('data:')) {
+        // keep as is
+      } else {
+        // ensure leading slash and strip optional /public prefix
+        b = b.replace(/^\.?\/+/, '/');
+        b = b.replace(/^\/public\//, '/');
+        if (!b.startsWith('/')) b = '/' + b;
+      }
+    }
+    return { ...g, banner_url: b };
+  });
+  res.json(mapped);
 });
 
 // Upload/update game banner
@@ -1632,20 +1736,20 @@ app.delete('/api/games/:id', auth, requireAdmin, (req, res) => {
 
 app.get('/api/items/hot', (req, res) => {
   const items = db.prepare("SELECT * FROM items WHERE status = 'active' ORDER BY RANDOM() LIMIT 5").all();
-  const mapped = items.map(i => ({ ...i, image_url: i.photo_url, title: i.name }));
+  const mapped = items.map(i => ({ ...i, image_url: normalizeMediaUrl(i.photo_url), title: i.name }));
   res.json(mapped);
 });
 
 app.get('/api/items/all', (req, res) => {
   const items = db.prepare("SELECT * FROM items WHERE status = 'active' ORDER BY RANDOM()").all();
-  const mapped = items.map(i => ({ ...i, image_url: i.photo_url, title: i.name }));
+  const mapped = items.map(i => ({ ...i, image_url: normalizeMediaUrl(i.photo_url), title: i.name }));
   res.json(mapped);
 });
 
 app.get('/api/items/game/:game_id', (req, res) => {
     const { game_id } = req.params;
     const items = db.prepare("SELECT * FROM items WHERE game_id = ? AND status = 'active'").all(game_id);
-    const mapped = items.map(i => ({ ...i, image_url: i.photo_url, title: i.name }));
+    const mapped = items.map(i => ({ ...i, image_url: normalizeMediaUrl(i.photo_url), title: i.name }));
     res.json(mapped);
 });
 
@@ -1751,13 +1855,34 @@ app.get('/api/admin/items', auth, requireAdmin, (req, res) => {
     const rows = db.prepare(sql).all(...params, lim, off);
     const mapped = rows.map(r => ({
       ...r,
-      image_url: r.photo_url,
+      image_url: normalizeMediaUrl(r.photo_url),
       title: r.name,
     }));
     res.json(mapped);
   } catch (e) {
     console.error('Admin list items error:', e);
     res.status(500).json({ error: 'Ошибка загрузки товаров' });
+  }
+});
+
+// Admin diagnostic: check existence of item photo files
+app.get('/api/admin/items/check-photos', auth, requireAdmin, (req, res) => {
+  try {
+    const rows = db.prepare('SELECT id, photo_url FROM items').all();
+    const missing = [];
+    let ok = 0;
+    for (const r of rows) {
+      const p = (r.photo_url || '').toString().trim();
+      if (!p) { missing.push({ id: r.id, reason: 'empty_photo_url' }); continue; }
+      // normalize: ensure without leading slash to join with __dirname
+      const rel = p.replace(/^\/+/, '');
+      const abs = path.join(__dirname, rel);
+      if (fs.existsSync(abs)) ok++; else missing.push({ id: r.id, photo_url: p, abs });
+    }
+    res.json({ total: rows.length, ok, missing_count: missing.length, missing });
+  } catch (e) {
+    console.error('Admin check-photos error:', e);
+    res.status(500).json({ error: 'Ошибка проверки фотографий товаров' });
   }
 });
 
@@ -1986,7 +2111,12 @@ app.get('/api/deals', auth, (req, res) => {
       WHERE d.buyer_id = ? OR i.seller_id = ?
       ORDER BY d.created_at DESC`;
     const deals = db.prepare(sql).all(req.user.id, req.user.id, req.user.id, req.user.id);
-    res.json(deals);
+    // Normalize item photo URL for consistent frontend rendering
+    const mappedDeals = deals.map(d => ({
+      ...d,
+      item_photo: normalizeMediaUrl(d.item_photo)
+    }));
+    res.json(mappedDeals);
   } catch (e) {
     console.error('Get deals error:', e);
     res.status(500).json({ error: 'Ошибка загрузки сделок' });

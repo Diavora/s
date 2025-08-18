@@ -229,7 +229,7 @@
       adminList.innerHTML = users.map(u => `
         <div class="game-item" style="gap:8px">
           <div style="display:flex;align-items:center;gap:10px">
-            <img src="${u.avatar_url || '/images/placeholder.png'}" alt="ava" style="width:42px;height:42px;border-radius:8px;object-fit:cover;border:1px solid #333;background:#2a2a2a">
+            <img src="${normalizeImageUrl(u.avatar_url || 'https://via.placeholder.com/42?text=U')}" alt="ava" style="width:42px;height:42px;border-radius:8px;object-fit:cover;border:1px solid #333;background:#2a2a2a" onerror="this.onerror=null;this.src='https://via.placeholder.com/42?text=U'">
             <div style="flex:1">
               <div style="font-weight:600;color:#fff">${u.nickname} <span style="opacity:.7">#${u.id}</span></div>
               <div style="font-size:.9rem;color:#bdbdbd">Баланс: <b>${u.balance}</b> ₽ · Заморожено: <b>${u.frozen_balance||0}</b> ₽</div>
@@ -306,6 +306,15 @@
         }, 3000);
     }
 
+    function normalizeImageUrl(u) {
+      if (!u) return '';
+      const s = String(u).trim();
+      if (!s) return '';
+      if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:')) return s;
+      if (s.startsWith('/')) return s;
+      return '/' + s.replace(/^\.?\//, '');
+    }
+
     function renderGames() {
       const q = (searchInput.value || '').toLowerCase();
       const src = currentCat === 'all' ? allGames : allGames.filter(g => g.category === currentCat);
@@ -317,7 +326,7 @@
       gameListEl.innerHTML = list.map(game => `
           <div class="game-item">
             <h3>${game.name} (ID: ${game.id})</h3>
-            <img src="${game.banner_url || '/images/placeholder.png'}" class="banner-preview" id="banner-preview-${game.id}">
+            <img src="${normalizeImageUrl(game.banner_url || 'https://via.placeholder.com/600x150?text=Banner')}" class="banner-preview" id="banner-preview-${game.id}" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x150?text=Banner'">
             <form class="upload-form" onsubmit="uploadBanner(event, ${game.id})">
               <input type="file" name="banner" accept="image/*" required>
               <div style="display:flex; gap:8px;">
@@ -359,7 +368,7 @@
     function renderAdminItems(items, append = false){
       if (!itemsListEl) return;
       const cards = (items||[]).map(it => {
-        const img = it.image_url || it.photo_url || '/images/placeholder.png';
+        const img = normalizeImageUrl(it.image_url || it.photo_url || 'https://via.placeholder.com/64x64?text=IMG');
         const title = escHtml(it.title || it.name || 'Без названия');
         const price = Number.isFinite(it.price) ? it.price : '-';
         const seller = escHtml(it.seller_nickname || String(it.seller_id||''));
@@ -368,7 +377,7 @@
           <div class="game-item" data-card-id="${it.id}" style="gap:8px">
             <div style="display:flex;align-items:center;gap:10px">
               <input type="checkbox" class="itm-chk" data-id="${it.id}" ${checked}>
-              <img src="${img}" alt="img" style="width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid #333;background:#2a2a2a">
+              <img src="${img}" alt="img" style="width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid #333;background:#2a2a2a" onerror="this.onerror=null;this.src='https://via.placeholder.com/64x64?text=IMG'">
               <div style="flex:1">
                 <div style="font-weight:600;color:#fff">${title} <span style="opacity:.7">#${it.id}</span></div>
                 <div style="font-size:.9rem;color:#bdbdbd">Игра: <b>${it.game_id}</b> · Цена: <b>${price}</b> ₽ · Продавец: <b>${seller}</b> · Статус: <b>${escHtml(it.status||'')}</b></div>

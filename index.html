@@ -3,10 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Мой Магазин</title>
-  <link rel="stylesheet" href="style.css" id="main-style" />
+  <title>XP DROP</title>
+  <link rel="stylesheet" href="style.css?v=5" id="main-style" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Poppins:wght@600;800;900&display=swap" rel="stylesheet" />
+  <style id="sell-inline">
+    /* Critical Sell styles (inline to bypass cache/order issues) */
+    .page#sell .sell-page{display:flex!important;flex-direction:column!important;gap:16px!important;max-width:1100px!important;margin:0 auto!important;width:100%!important}
+    .page#sell .sell-select .games-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;gap:12px!important}
+    .page#sell .sell-grid{display:grid!important;grid-template-columns:340px 1fr!important;gap:16px!important;align-items:start!important}
+    .page#sell .sell-side{display:flex!important;flex-direction:column!important;gap:12px!important}
+    .page#sell .chosen-preview{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px solid var(--border-color)!important;border-radius:12px!important;padding:12px!important;display:grid!important;gap:10px!important}
+    .page#sell .chosen-preview .preview-img{width:100%!important;height:180px!important;object-fit:cover!important;border-radius:10px!important;border:1px solid var(--border-color)!important}
+    .page#sell .photo-uploader{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px dashed var(--border-color)!important;border-radius:12px!important;overflow:hidden!important}
+    .page#sell .photo-uploader .uploader-drop{display:grid!important;grid-template-columns:auto 1fr!important;gap:12px!important;align-items:center!important;padding:16px!important;cursor:pointer!important}
+    .page#sell .uploader-preview{position:relative!important}
+    .page#sell .uploader-preview img{width:100%!important;height:240px!important;object-fit:cover!important;display:block!important}
+    .page#sell .uploader-preview .clear{position:absolute!important;top:8px!important;right:8px!important;border-radius:50%!important;background:rgba(0,0,0,.4)!important;color:#fff!important;border:1px solid rgba(255,255,255,.3)!important}
+    /* Critical select override to avoid white thick outline/background */
+    .page#sell .sell-form select{background-color:var(--input-bg,rgba(255,255,255,.06))!important;color:var(--text-color,#fff)!important;border:1px solid var(--border-color)!important;border-radius:10px!important;padding:10px 40px 10px 12px!important;min-height:42px!important;outline:none!important;-webkit-appearance:none!important;-moz-appearance:none!important;appearance:none!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 12px center!important;background-size:12px 12px!important;forced-color-adjust:none!important;-webkit-tap-highlight-color:transparent}
+    .page#sell .sell-form select:focus,.page#sell .sell-form select:focus-visible,.page#sell .sell-form select:active{outline:none!important;box-shadow:0 0 0 3px rgba(187,0,64,.15)!important;border-color:var(--accent-color,#bb0040)!important;background-color:var(--input-bg-focus,rgba(255,255,255,.08))!important}
+    .page#sell .sell-form select:hover{border-color:var(--accent-color,#bb0040)!important}
+    .page#sell .sell-form select::-webkit-focus-inner{border:0;padding:0}
+    .page#sell .sell-form select::-ms-expand{display:none}
+    .page#sell .sell-form select:-moz-focusring{outline:none}
+    .page#sell .sell-form{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px solid var(--border-color)!important;border-radius:12px!important;padding:14px!important;display:flex!important;flex-direction:column!important;gap:12px!important}
+    .page#sell .sell-form .field{display:flex!important;flex-direction:column!important;gap:6px!important}
+    .page#sell .field-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+    @media(max-width:920px){.page#sell .sell-grid{grid-template-columns:1fr!important}}
+    @media(max-width:560px){
+      .page#sell .sell-page{gap:12px!important}
+      .page#sell .chosen-preview{padding:10px!important}
+      .page#sell .chosen-preview .preview-img{height:130px!important}
+      .page#sell .uploader-preview img{height:160px!important}
+    }
+  </style>
 </head>
 <body>
   <main id="app">
@@ -94,7 +125,7 @@
                 <h2 class="category-title">Горячие Товары</h2>
                 <div class="hot-items-banner-container">
                     <div class="banner hot-items-banner">
-                        <p>Здесь будет баннер горячих товаров</p>
+                        <img src="images/hot-banner.png" alt="Горячие товары" class="banner-image">
                     </div>
                 </div>
             </div>
@@ -173,33 +204,92 @@
 
     <!-- Продажа -->
     <section id="sell" class="page">
-      <h1>Продать товар</h1>
-      <div id="sell-select">
-        <input id="sell-search" class="search-input" type="text" placeholder="Поиск игры..." />
-        <div id="sell-game-list" class="cards full"></div>
-      </div>
-
-      <div id="sell-form-wrapper" class="hidden">
-        <div class="chosen-preview">
-          <img id="chosen-img" class="preview-img" src="" alt="" />
-          <span id="chosen-title"></span>
-          <button id="change-game" type="button" class="accent-btn small">Изменить игру</button>
+      <div class="page-container sell-page">
+        <div class="sell-header">
+          <h1>Продать товар</h1>
+          <p class="muted">Выберите игру, заполните карточку и добавьте фото — предварительный просмотр появится сразу.</p>
         </div>
-        <form id="sell-form" class="form">
-          <label>Название товара
-              <input type="text" name="name" required />
-            </label>
-            <label>Описание
-            <textarea name="desc" rows="4" required></textarea>
-          </label>
-          <label>Фото товара
-            <input type="file" id="sell-photo" name="photo" accept="image/*" required />
-          </label>
-          <label>Цена (₽)
-            <input type="number" name="price" min="0" required />
-          </label>
-          <button type="submit" class="accent-btn">Выставить</button>
-        </form>
+
+        <div id="sell-select" class="sell-select">
+          <div class="search-container large">
+            <i class="fas fa-search"></i>
+            <input id="sell-search" class="search-input" type="text" placeholder="Поиск игры..." />
+          </div>
+          <div id="sell-game-list" class="card-grid games-grid"></div>
+        </div>
+
+        <div id="sell-form-wrapper" class="hidden">
+          <div class="sell-grid">
+            <aside class="sell-side">
+              <div class="chosen-preview">
+                <img id="chosen-img" class="preview-img" src="" alt="Выбранная игра" />
+                <div class="chosen-meta">
+                  <span id="chosen-title" class="chosen-title"></span>
+                  <button id="change-game" type="button" class="accent-btn small outline">
+                    <i class="fa-solid fa-rotate"></i> Изменить игру
+                  </button>
+                </div>
+              </div>
+
+              <div class="photo-uploader" id="sell-photo-uploader">
+                <input type="file" id="sell-photo" name="photo" accept="image/*" class="hidden" required />
+                <div class="uploader-drop">
+                  <div class="uploader-icon"><i class="fa-regular fa-image"></i></div>
+                  <div class="uploader-text">
+                    <strong>Перетащите фото сюда</strong>
+                    <span>или нажмите, чтобы выбрать файл</span>
+                    <small class="muted">JPG / PNG, до 5 МБ</small>
+                  </div>
+                </div>
+                <div class="uploader-preview hidden" id="sell-photo-preview-wrap">
+                  <img id="sell-photo-preview" alt="Предпросмотр товара" />
+                  <button type="button" class="icon-btn small clear" id="sell-photo-clear" title="Удалить фото" aria-label="Удалить фото">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+            </aside>
+
+            <form id="sell-form" class="sell-form">
+              <label class="field">
+                <span>Название товара</span>
+                <input type="text" name="name" placeholder="Например: 1000 гемов, аккаунт с легендой" required />
+              </label>
+
+              <label class="field">
+                <span>Описание</span>
+                <textarea name="desc" rows="6" placeholder="Кратко опишите товар, условия передачи и т.п." required></textarea>
+              </label>
+
+              <div class="field-grid">
+                <label class="field">
+                  <span>Цена (₽)</span>
+                  <input type="number" name="price" min="0" step="1" placeholder="0" required />
+                </label>
+                <label class="field">
+                  <span>Срок доставки</span>
+                  <select name="delivery_time">
+                    <option value="instant" selected>Мгновенно</option>
+                    <option value="15m">До 15 минут</option>
+                    <option value="1h">До 1 часа</option>
+                    <option value="24h">До 24 часов</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="field hidden" id="br-server-field">
+                <span>Сервер (Black Russia)</span>
+                <select name="server" id="br-server-select"></select>
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="accent-btn">
+                  <i class="fa-solid fa-paper-plane"></i> Выставить товар
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -239,17 +329,73 @@
 
   <!-- Навигация -->
   <!-- Item modal -->
-  <div id="toast-root"></div>
   <div id="item-modal" class="overlay hidden">
-    <div class="modal-card">
-      <img id="item-modal-img" src="" alt="" />
-      <h3 id="item-modal-name"></h3>
-      <p id="item-modal-desc"></p>
-      <span id="item-modal-seller" class="seller"></span>
-      <strong id="item-modal-price"></strong>
-      <div class="modal-actions">
-        <button id="item-buy" class="accent-btn">Купить</button>
-        <button id="item-close" class="accent-btn small">Отмена</button>
+    <div class="modal-card item-modal-neo">
+      <div class="item-modal-header">
+        <h3 id="item-modal-name" class="title">Товар</h3>
+        <div class="header-tools">
+          <span class="inline-feedback">
+            <span id="share-tip" class="tip" role="status" aria-live="polite"><i class="fa-solid fa-link"></i> Ссылка скопирована</span>
+            <span id="fav-tip" class="tip" role="status" aria-live="polite"><i class="fa-solid fa-heart"></i> Добавлено в избранное</span>
+          </span>
+          <button id="item-share" class="icon-btn" title="Поделиться" aria-label="Поделиться">
+            <i class="fa-solid fa-share-nodes"></i>
+          </button>
+          <button id="item-fav" class="icon-btn" title="В избранное" aria-label="В избранное">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+          <button id="item-close" class="icon-btn small" aria-label="Закрыть">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <div class="neo-grid">
+        <div class="neo-media">
+          <img id="item-modal-img" src="" alt="Изображение товара" />
+          <div class="side-stack">
+            <div class="why-safe" aria-label="Почему это безопасно">
+              <h4>Почему это безопасно</h4>
+              <ul>
+                <li><i class="fa-solid fa-shield-halved"></i> Эскроу: оплата блокируется до подтверждения сделки</li>
+                <li><i class="fa-solid fa-user-check"></i> Проверенные продавцы и жалобы</li>
+                <li><i class="fa-solid fa-headset"></i> Поддержка помогает при споре</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="neo-info">
+          <div class="chips">
+            <span class="chip seller">
+              <i class="fa-solid fa-user"></i>
+              <span id="item-modal-seller"></span>
+            </span>
+          </div>
+          <p id="item-modal-desc" class="desc">Нет подробного описания. Задайте вопрос продавцу — он ответит быстрее всего.</p>
+          <div class="item-modal-actions">
+            <div class="price-box">
+              <span class="label">Цена</span>
+              <span id="item-modal-price" class="value">0 ₽</span>
+            </div>
+            <button id="item-buy" class="accent-btn">
+              <i class="fa-solid fa-cart-shopping"></i>
+              Купить
+            </button>
+          </div>
+          <div class="faq-actions">
+            <details class="faq-item" id="faq-deal">
+              <summary><i class="fa-solid fa-route"></i> Как проходит сделка</summary>
+              <div class="faq-panel">
+                Вы оплачиваете товар, продавец передаёт доступ/предмет. После подтверждения средства перечисляются продавцу.
+              </div>
+            </details>
+            <details class="faq-item" id="faq-problem">
+              <summary><i class="fa-regular fa-circle-question"></i> Если возникла проблема</summary>
+              <div class="faq-panel">
+                Откройте спор в сделке — подключится поддержка и поможет урегулировать ситуацию.
+              </div>
+            </details>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -337,5 +483,7 @@
   </div>
 
   <script src="script.js"></script>
+  <!-- Toast notifications root -->
+  <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>
