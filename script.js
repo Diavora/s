@@ -109,6 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let activePartner = { name: 'Выберите диалог', avatar: '' };
   // Флаг, чтобы отличать нашу управляемую анимацию перехода по клику от переходов по истории/внешних изменений hash
   let navAnimating = false;
+  // Флаг подавления следующего hashchange после программной смены хэша
+  let ignoreNextHash = false;
   let chatPollTimer = null;
   const CHAT_POLL_MS = 4000;
   const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 минут — эвристика для "в сети"
@@ -303,6 +305,7 @@ function cleanTitle(s) {
       };
       icon.addEventListener('animationend', cleanup, { once: true });
     });
+  };
 
   // Right-side FAQ buttons toggle right panels
   function togglePanel(which) {
@@ -326,6 +329,28 @@ function cleanTitle(s) {
     howDealBtn?.classList.toggle('active', isDeal);
     problemBtn?.classList.toggle('active', !isDeal);
   }
+
+  // Универсальная помощь для раздела сделок (кнопка вопроса)
+  function openHelp(){
+    // Если есть отдельная панель/оверлей помощи для сделок — откроем её
+    if (dealHelp) {
+      dealHelp.classList.add('active');
+      dealHelp.classList.remove('hidden');
+      try { document.body.classList.add('modal-open'); } catch {}
+      return;
+    }
+    // Фолбэк: короткая подсказка
+    showToast('Нужна помощь по сделке? Откройте карточку сделки для деталей. При проблеме — используйте «Открыть спор» или напишите в чат.', 'success', 6000);
+  }
+
+  function closeHelp(){
+    if (dealHelp) {
+      dealHelp.classList.remove('active');
+      dealHelp.classList.add('hidden');
+      try { document.body.classList.remove('modal-open'); } catch {}
+    }
+  }
+
   howDealBtn?.addEventListener('click', () => togglePanel('deal'));
   problemBtn?.addEventListener('click', () => togglePanel('problem'));
 
@@ -336,7 +361,11 @@ function cleanTitle(s) {
     const p = e.target.closest('#item-problem');
     if (p) { e.preventDefault(); togglePanel('problem'); }
   });
-  };
+
+  // Deals help button bindings
+  dealsHelpBtn?.addEventListener('click', (e) => { e.stopPropagation(); openHelp(); });
+  dealHelpClose?.addEventListener('click', closeHelp);
+  dealHelp?.addEventListener('click', (e) => { if (e.target === dealHelp) closeHelp(); });
 
   // --- Fancy nav bubble effect ---
   const ensureBubbleLayer = () => {
@@ -786,9 +815,13 @@ function markDialogRead(chatId, cardEl){
       return;
     }
 
-    // Обычные вкладки
+    // Обычные вкладки: моментальный переход без ожидания hashchange
     if (isAlreadyActive) return;
     navBtns.forEach(x => x.classList.toggle('active', x === b));
+    // Немедленно отрисуем нужную страницу
+    navigate(target);
+    // Обновим хэш, подавив обработчик hashchange, чтобы избежать двойной отрисовки
+    ignoreNextHash = true;
     window.location.hash = target;
     return;
   }));
@@ -796,6 +829,7 @@ function markDialogRead(chatId, cardEl){
   // Первичная навигация по hash (например, из profile.html приходим с #deals)
   navigate(getTargetFromHash());
   window.addEventListener('hashchange', () => {
+    if (ignoreNextHash) { ignoreNextHash = false; return; }
     navigate(getTargetFromHash());
   });
   // Упрощённая версия без спец-обработки resize/sticky
@@ -1373,14 +1407,40 @@ function markDialogRead(chatId, cardEl){
     });
     showLessBtn.addEventListener('click', () => {
       const activeCat = document.querySelector('.tab-button.active')?.dataset.category || 'pc';
-      renderTab(activeCat, false);
-    });
-  };
 
   const showItemsForGame = async (gameId, gameName) => {
     const itemsPage = document.getElementById('game-items-page');
     const itemsContainer = itemsPage.querySelector('.page-container');
     if (!itemsContainer) return;
+
+    // Моментальный плейсхолдер до загрузки данных
+    const skeletonBlock = () => {
+      const sk = (w = 100) => `style="background: linear-gradient(45deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; border-radius: 8px; height: 16px; width: ${w}%;"`;
+      const thumb = `style="height: 150px; width: 100%; background: linear-gradient(45deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; border-radius: 8px;"`;
+      const cards = Array.from({length: 8}).map(() => `
+        <div class="shop-item">
+          <div class="thumb-wrap"><div ${thumb}></div></div>
+          <div class="meta" style="gap:8px;">
+            <div ${sk(90)}></div>
+            <div ${sk(60)}></div>
+          </div>
+        </div>
+      `).join('');
+      return `
+        <div class="items-header">
+          <button class="accent-btn outline" id="back-to-catalog">Назад</button>
+          <h2>${gameName ? `Товары — ${escapeHtml(gameName)}` : 'Товары'}</h2>
+        </div>
+        <div class="card-grid">${cards}</div>
+      `;
+    };
+    itemsContainer.innerHTML = skeletonBlock();
+
+    // Кнопка назад работает сразу
+    itemsContainer.querySelector('#back-to-catalog')?.addEventListener('click', () => {
+      window.location.hash = 'catalog';
+      itemsContainer.innerHTML = '';
+    });
 
     try {
       const res = await fetch(`/api/items/game/${gameId}`);
