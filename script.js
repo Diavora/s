@@ -693,6 +693,31 @@ dlPwaBtn?.addEventListener('click', async (e) => {
 });
 
   /* -------------------- NAV -------------------- */
+const navChatsBadge = document.getElementById('nav-chats-badge');
+function updateChatsBadge(count){
+  if (!navChatsBadge) return;
+  const c = Math.max(0, parseInt(count || 0, 10) || 0);
+  navChatsBadge.dataset.count = String(c);
+  navChatsBadge.textContent = c > 99 ? '99+' : String(c);
+  navChatsBadge.classList.toggle('hidden', c === 0);
+}
+
+// Пометить диалог прочитанным локально и обновить бейджи
+function markDialogRead(chatId, cardEl){
+  try {
+    // Обновим локальные данные
+    if (Array.isArray(chats)){
+      const idx = chats.findIndex(x => String(x.id) === String(chatId));
+      if (idx !== -1) chats[idx].unread_count = 0;
+      const total = chats.reduce((s, d) => s + (d.unread_count || 0), 0);
+      updateChatsBadge(total);
+    }
+    // Уберём бейдж у карточки, если передан элемент
+    if (cardEl){
+      cardEl.querySelector('.badge.unread')?.remove();
+    }
+  } catch {}
+}
   const getTargetFromHash = () => {
     const h = (window.location.hash || '').replace('#','').trim();
     if (!h) return 'catalog';
@@ -910,6 +935,7 @@ dlPwaBtn?.addEventListener('click', async (e) => {
     if (!dialogsRoot) return;
     if (!Array.isArray(list) || list.length === 0){
       dialogsRoot.innerHTML = '<div class="empty">Пока нет диалогов</div>';
+      updateChatsBadge(0);
       return;
     }
     dialogsRoot.innerHTML = list.map(d => {
@@ -955,11 +981,18 @@ dlPwaBtn?.addEventListener('click', async (e) => {
         }
         // По умолчанию не показываем "в сети" — только по данным
         setPresenceFromDialog(d);
+        // Мгновенно пометим диалог прочитанным (локально) и обновим бейджи
+        markDialogRead(d.id, el);
         if (chatsLayout) chatsLayout.classList.add('chat-open');
         await loadChatMessages(activeChatId);
         startChatPolling(activeChatId);
       });
     });
+    // Обновим бейдж непрочитанных на вкладке Чаты
+    try {
+      const totalUnread = list.reduce((sum, d) => sum + (d.unread_count || 0), 0);
+      updateChatsBadge(totalUnread);
+    } catch {}
     // если чат был активен ранее — восстановим опрос
     if (activeChatId) startChatPolling(activeChatId);
   }
@@ -1059,6 +1092,8 @@ dlPwaBtn?.addEventListener('click', async (e) => {
       renderMessages(data);
       // После обновления ленты — подправим presence по последним сообщениям (если нет явного флага)
       setPresenceFromMessages(data);
+      // Если чат открыт — сбросим непрочитанные локально и обновим бейджи
+      if (String(activeChatId) === String(id)) markDialogRead(id);
     } catch(e){
       console.error(e);
       chatThread.innerHTML = `<span class="error-msg">${e.message}</span>`;

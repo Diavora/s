@@ -1,3 +1,20 @@
+/* Бейдж непрочитанных для вкладки Чаты */
+.bottom-nav .nav-btn { position: relative; }
+#nav-chats-badge.nav-badge {
+  position: absolute;
+  top: -6px; right: 8px;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-color, #bb0040);
+  color: #fff; font-size: 11px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; box-shadow: 0 2px 8px rgba(187,0,64,.4);
+}
+#nav-chats-badge[data-count="0"],
+#nav-chats-badge.hidden {
+  display: none !important;
+}
 /* Glass style for item modal */
 .item-modal-glass {
   background: linear-gradient(180deg, rgba(30,30,30,0.72), rgba(24,24,27,0.78));
