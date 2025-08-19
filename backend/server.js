@@ -21,8 +21,22 @@ const persistentBase = (() => {
   return process.platform !== 'win32' ? '/data' : __dirname;
 })();
 try { fs.mkdirSync(persistentBase, { recursive: true }); } catch (_) {}
-const dbPath = path.join(persistentBase, 'store.db');
-const db = new Database(dbPath);
+let dbPath = path.join(persistentBase, 'store.db');
+try {
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  // Try open DB on persistent base
+  var db = new Database(dbPath);
+  try { console.log('[db] using', dbPath); } catch(_) {}
+} catch (e) {
+  // Fallback to project directory on any failure
+  try { console.warn('[db] fallback to __dirname due to:', e?.message || e); } catch(_) {}
+  dbPath = path.join(__dirname, 'store.db');
+  const dir2 = path.dirname(dbPath);
+  if (!fs.existsSync(dir2)) fs.mkdirSync(dir2, { recursive: true });
+  var db = new Database(dbPath);
+  try { console.log('[db] using (fallback)', dbPath); } catch(_) {}
+}
 
 // --- ensure existing DB has latest columns ---
 function ensureColumn(table, column, typeDef, unique = false) {
