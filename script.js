@@ -1543,10 +1543,13 @@ function markDialogRead(chatId, cardEl){
       ensureBrServersPopulated();
       brServerField.classList.remove('hidden');
       brServerSelect.required = true;
+      brServerSelect.disabled = false;
     } else {
       brServerField.classList.add('hidden');
       brServerSelect.required = false;
-      brServerSelect.selectedIndex = 0; // сброс к placeholder (если есть)
+      brServerSelect.disabled = true; // отключим, чтобы не сабмитился
+      // сброс значения к placeholder (если есть)
+      try { brServerSelect.selectedIndex = 0; brServerSelect.value = ''; } catch {}
     }
   }
 
@@ -1632,7 +1635,7 @@ function markDialogRead(chatId, cardEl){
     }
     fd.append('game_id', selectedGame.id);
     // Обязательный выбор сервера для Black Russia
-    if ((selectedGame.name || '').toLowerCase() === 'black russia') {
+    if ((selectedGame.name || '').toLowerCase().includes('black russia')) {
       const server = brServerSelect ? brServerSelect.value : '';
       if (!server) return showToast('Выберите сервер Black Russia', 'error');
       fd.append('server', server);

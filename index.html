@@ -9,9 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Poppins:wght@600;800;900&display=swap" rel="stylesheet" />
   <style id="sell-inline">
     /* Critical Sell styles (inline to bypass cache/order issues) */
+    html,body{overflow-x:hidden!important}
     .page#sell .sell-page{display:flex!important;flex-direction:column!important;gap:16px!important;max-width:1100px!important;margin:0 auto!important;width:100%!important}
     .page#sell .sell-select .games-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;gap:12px!important}
-    .page#sell .sell-grid{display:grid!important;grid-template-columns:340px 1fr!important;gap:16px!important;align-items:start!important}
+    .page#sell .sell-grid{display:grid!important;grid-template-columns:340px 1fr!important;gap:16px!important;align-items:start!important;width:100%!important}
     .page#sell .sell-side{display:flex!important;flex-direction:column!important;gap:12px!important}
     .page#sell .chosen-preview{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px solid var(--border-color)!important;border-radius:12px!important;padding:12px!important;display:grid!important;gap:10px!important}
     .page#sell .chosen-preview .preview-img{width:100%!important;height:180px!important;object-fit:cover!important;border-radius:10px!important;border:1px solid var(--border-color)!important}
@@ -19,7 +20,7 @@
     .page#sell .photo-uploader .uploader-drop{display:grid!important;grid-template-columns:auto 1fr!important;gap:12px!important;align-items:center!important;padding:16px!important;cursor:pointer!important}
     .page#sell .uploader-preview{position:relative!important}
     .page#sell .uploader-preview img{width:100%!important;height:240px!important;object-fit:cover!important;display:block!important}
-    .page#sell .uploader-preview .clear{position:absolute!important;top:8px!important;right:8px!important;border-radius:50%!important;background:rgba(0,0,0,.4)!important;color:#fff!important;border:1px solid rgba(255,255,255,.3)!important}
+    .page#sell .uploader-preview .clear{position:absolute!important;top:8px!important;right:8px!important;width:36px!important;height:36px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:50%!important;background:rgba(0,0,0,.5)!important;color:#fff!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:0 2px 8px rgba(0,0,0,.35)!important;z-index:3!important;cursor:pointer!important;-webkit-tap-highlight-color:transparent!important;touch-action:manipulation!important;font-size:18px!important}
     /* Critical select override to avoid white thick outline/background */
     .page#sell .sell-form select{background-color:var(--input-bg,rgba(255,255,255,.06))!important;color:var(--text-color,#fff)!important;border:1px solid var(--border-color)!important;border-radius:10px!important;padding:10px 40px 10px 12px!important;min-height:42px!important;outline:none!important;-webkit-appearance:none!important;-moz-appearance:none!important;appearance:none!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 12px center!important;background-size:12px 12px!important;forced-color-adjust:none!important;-webkit-tap-highlight-color:transparent}
     .page#sell .sell-form select:focus,.page#sell .sell-form select:focus-visible,.page#sell .sell-form select:active{outline:none!important;box-shadow:0 0 0 3px rgba(187,0,64,.15)!important;border-color:var(--accent-color,#bb0040)!important;background-color:var(--input-bg-focus,rgba(255,255,255,.08))!important}
@@ -27,12 +28,14 @@
     .page#sell .sell-form select::-webkit-focus-inner{border:0;padding:0}
     .page#sell .sell-form select::-ms-expand{display:none}
     .page#sell .sell-form select:-moz-focusring{outline:none}
-    .page#sell .sell-form{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px solid var(--border-color)!important;border-radius:12px!important;padding:14px!important;display:flex!important;flex-direction:column!important;gap:12px!important}
+    .page#sell .sell-form{background:var(--card-bg,rgba(255,255,255,.04))!important;border:1px solid var(--border-color)!important;border-radius:12px!important;padding:14px!important;display:flex!important;flex-direction:column!important;gap:12px!important;min-width:0!important}
     .page#sell .sell-form .field{display:flex!important;flex-direction:column!important;gap:6px!important}
-    .page#sell .field-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+    .page#sell .field-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;min-width:0!important}
     @media(max-width:920px){.page#sell .sell-grid{grid-template-columns:1fr!important}}
     @media(max-width:560px){
       .page#sell .sell-page{gap:12px!important}
+      .page#sell .field-grid{grid-template-columns:1fr!important}
+      .page#sell .sell-form{padding:12px!important}
       .page#sell .chosen-preview{padding:10px!important}
       .page#sell .chosen-preview .preview-img{height:130px!important}
       .page#sell .uploader-preview img{height:160px!important}
