@@ -81,6 +81,28 @@
     margin-bottom: 2rem;
 }
 
+/* Mobile adjustments to prevent right-side clipping */
+@media (max-width: 600px) {
+  .profile-tabs-top {
+    flex-wrap: wrap;                /* переносим кнопки на следующую строку */
+    row-gap: 0.5rem;               /* вертикальный зазор между рядами */
+  }
+  .profile-tabs-top .tab-btn {
+    flex: 1 1 calc(50% - 6px);     /* по две кнопки в ряд, с учётом gap */
+    text-align: center;
+    padding: 0.65rem 0.75rem;      /* компактнее, чтобы точно помещалось */
+  }
+
+  .balance-container {
+    grid-template-columns: 1fr;    /* баланс и заморожено в столбик */
+  }
+
+  .profile-container {
+    padding: 0 0.75rem;            /* немного уже горизонтальные поля */
+    margin: 1rem auto 2rem;        /* плотнее сверху на телефонах */
+  }
+}
+
 .balance-box {
     background-color: var(--bg-secondary);
     padding: 1.5rem;
@@ -125,6 +147,7 @@
     font-weight: 600;
     color: var(--text-muted);
     transition: background-color 0.2s, color 0.2s;
+    min-width: 0; /* позволяет сжиматься на узких экранах */
 }
 
 .tab-btn.active {

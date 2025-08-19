@@ -402,22 +402,78 @@
   </div>
   <!-- Auth modal -->
   <div id="auth-overlay" class="overlay hidden">
-    <div class="auth-card">
-      <h2 id="auth-title">Регистрация</h2>
-      <form id="auth-form" class="form">
-        <label>Никнейм
-          <input type="text" name="nickname" required autocomplete="username" />
-        </label>
-        <label>Пароль
-          <input type="password" name="password" required autocomplete="current-password" minlength="6"/>
-        </label>
-        <label id="confirm-password-label" class="hidden">Подтвердите пароль
-          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6"/>
-        </label>
-        <p id="auth-error" class="error-msg"></p>
-        <button type="submit" class="accent-btn">Войти</button>
-        <button type="button" id="switch-auth-btn" class="link-btn">Нет аккаунта? Зарегистрироваться</button>
-      </form>
+    <div class="auth-card neo">
+      <div class="auth-layout">
+        <!-- Sidebar: downloads / info -->
+        <aside class="auth-aside">
+          <div class="download-card">
+            <div class="dl-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+            <div class="dl-text">
+              <h3>XP DROP на телефоне</h3>
+              <p class="muted">Установите приложение и продавайте/покупайте быстрее.</p>
+            </div>
+            <div class="dl-actions">
+              <a class="store-btn android" href="#" target="_blank" rel="noopener">
+                <i class="fa-brands fa-android"></i> APK (Android)
+              </a>
+              <a class="store-btn pwa" href="#" target="_blank" rel="noopener">
+                <i class="fa-solid fa-download"></i> Установить как PWA
+              </a>
+            </div>
+          </div>
+          <div class="download-card small">
+            <div class="dl-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="dl-text">
+              <h4>Гид по безопасности</h4>
+              <p class="muted">Как избежать мошенников и спорных ситуаций.</p>
+            </div>
+            <div class="dl-actions">
+              <a class="store-btn guide" href="#" target="_blank" rel="noopener"><i class="fa-solid fa-book"></i> Читать</a>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main: auth form -->
+        <section class="auth-main">
+          <div class="auth-tabs">
+            <button id="auth-tab-login" class="auth-tab active" type="button">Вход</button>
+            <button id="auth-tab-register" class="auth-tab" type="button">Регистрация</button>
+          </div>
+          <h2 id="auth-title" class="auth-title">Вход</h2>
+
+          <form id="auth-form" class="form auth-form">
+            <label class="field">
+              <span>Никнейм</span>
+              <input type="text" name="nickname" required autocomplete="username" />
+            </label>
+            <label class="field password-field">
+              <span>Пароль</span>
+              <div class="password-wrap">
+                <input id="auth-password" type="password" name="password" required autocomplete="current-password" minlength="6"/>
+                <button type="button" id="auth-pass-toggle" class="icon-btn small eye" aria-label="Показать пароль"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </label>
+            <label id="confirm-password-label" class="field hidden">
+              <span>Подтвердите пароль</span>
+              <div class="password-wrap">
+                <input id="auth-password-2" type="password" name="confirm_password" autocomplete="new-password" minlength="6"/>
+                <button type="button" id="auth-pass2-toggle" class="icon-btn small eye" aria-label="Показать пароль"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </label>
+
+            <label id="terms-row" class="checkbox-row hidden">
+              <input type="checkbox" id="terms" />
+              <span>Я принимаю правила сервиса</span>
+            </label>
+
+            <p id="auth-error" class="error-msg"></p>
+            <div class="form-actions">
+              <button type="submit" class="accent-btn" id="auth-submit">Войти</button>
+              <button type="button" id="switch-auth-btn" class="link-btn">Нет аккаунта? Зарегистрироваться</button>
+            </div>
+          </form>
+        </section>
+      </div>
     </div>
   </div>
 

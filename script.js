@@ -538,12 +538,6 @@ function cleanTitle(s) {
   dealModal?.addEventListener('click', (e) => { if (e.target === dealModal) closeDealModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dealModal && !dealModal.classList.contains('hidden')) closeDealModal(); });
 
-  // Help modal
-  const openHelp = () => { if (!dealHelp) return; dealHelp.classList.add('active'); dealHelp.classList.remove('hidden'); };
-  const closeHelp = () => { if (!dealHelp) return; dealHelp.classList.remove('active'); setTimeout(() => dealHelp.classList.add('hidden'), 250); };
-  dealsHelpBtn?.addEventListener('click', openHelp);
-  dealHelpClose?.addEventListener('click', closeHelp);
-  dealHelp?.addEventListener('click', (e) => { if (e.target === dealHelp) closeHelp(); });
   applyTheme();
   themeToggle?.addEventListener('click', () => {
     isLight = !isLight;
@@ -551,53 +545,155 @@ function cleanTitle(s) {
     applyTheme();
   });
 
-  /* -------------------- AUTH -------------------- */
-  const showAuth = (reg = false) => {
-    registerMode = reg;
-    authTitle.textContent = reg ? 'Регистрация' : 'Вход';
-    confirmRow.classList.toggle('hidden', !reg);
-    confirmRow.classList.toggle('visible', reg);
-    authError.textContent = '';
-    authOverlay.classList.add('active');
-    authOverlay.classList.remove('hidden');
-  };
-  const hideAuth = () => {
-    authOverlay.classList.remove('active');
-    authOverlay.classList.add('hidden');
-  };
+/* -------------------- AUTH -------------------- */
+// Элементы вкладок и полей паролей
+const loginTab = document.getElementById('auth-tab-login');
+const registerTab = document.getElementById('auth-tab-register');
+const termsRow = document.getElementById('terms-row');
+const termsCheckbox = document.getElementById('terms');
+const pass1 = document.getElementById('auth-password');
+const pass2 = document.getElementById('auth-password-2');
+const passToggle1 = document.getElementById('auth-pass-toggle');
+const passToggle2 = document.getElementById('auth-pass2-toggle');
+const authSubmitBtn = document.getElementById('auth-submit');
 
-  authSwitch?.addEventListener('click', () => showAuth(!registerMode));
-  authOverlay?.addEventListener('click', (e) => { if (e.target === authOverlay) hideAuth(); });
+const showAuth = (reg = false) => {
+  registerMode = reg;
+  authTitle.textContent = reg ? 'Регистрация' : 'Вход';
+  confirmRow.classList.toggle('hidden', !reg);
+  confirmRow.classList.toggle('visible', reg);
+  termsRow?.classList.toggle('hidden', !reg);
+  // Вкладки активные
+  loginTab?.classList.toggle('active', !reg);
+  registerTab?.classList.toggle('active', reg);
+  // Тексты кнопок
+  if (authSubmitBtn) authSubmitBtn.textContent = reg ? 'Зарегистрироваться' : 'Войти';
+  if (authSwitch) authSwitch.textContent = reg ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
+  // Сброс ошибок и полей
+  authError.textContent = '';
+  if (pass1) { pass1.type = 'password'; pass1.value = ''; pass1.setAttribute('autocomplete', reg ? 'new-password' : 'current-password'); }
+  if (pass2) { pass2.type = 'password'; pass2.value = ''; pass2.setAttribute('autocomplete', 'new-password'); }
+  // Сброс иконок глаза
+  const resetEye = (btn) => { const i = btn?.querySelector('i'); if (i){ i.classList.remove('fa-eye-slash'); i.classList.add('fa-eye'); } };
+  resetEye(passToggle1); resetEye(passToggle2);
+  // Фокус на ник
+  try { authForm?.querySelector('input[name="nickname"]').focus(); } catch {}
+  authOverlay.classList.add('active');
+  authOverlay.classList.remove('hidden');
+};
 
-  authForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    authError.textContent = '';
-    const fd = new FormData(authForm);
-    const data = Object.fromEntries(fd.entries());
-    if (registerMode) {
-      if (data.password !== data.confirm_password) return authError.textContent = 'Пароли не совпадают';
-      if (data.password.length < 6) return authError.textContent = 'Мин. 6 символов';
+const hideAuth = () => {
+  authOverlay.classList.remove('active');
+  authOverlay.classList.add('hidden');
+};
+
+// Переключатель под формой
+authSwitch?.addEventListener('click', () => showAuth(!registerMode));
+// Вкладки
+loginTab?.addEventListener('click', () => showAuth(false));
+registerTab?.addEventListener('click', () => showAuth(true));
+// Клик по оверлею закрывает модалку
+authOverlay?.addEventListener('click', (e) => { if (e.target === authOverlay) hideAuth(); });
+// Переключатели показа пароля
+function bindPassToggle(btn, input){
+  if (!btn || !input) return;
+  btn.addEventListener('click', () => {
+    const toText = input.getAttribute('type') === 'password';
+    input.setAttribute('type', toText ? 'text' : 'password');
+    const icon = btn.querySelector('i');
+    if (icon){
+      icon.classList.toggle('fa-eye', !toText);
+      icon.classList.toggle('fa-eye-slash', toText);
     }
-    const ep = registerMode ? '/api/register' : '/api/login';
-    try {
-      const r = await fetch(ep, { method: 'POST', ...json(data) });
-      const res = await r.json();
-      if (!r.ok) throw new Error(res.error || 'Ошибка');
-      localStorage.setItem('token', res.token);
-      hideAuth();
-      if (intendedRoute) {
-        const target = intendedRoute;
-        intendedRoute = null;
-        const currentHash = (window.location.hash || '').replace('#','');
-        if (currentHash === target) {
-          // Если hash уже указывает на защищённую страницу, ручной вызов навигации
-          navigate(target);
-        } else {
-          window.location.hash = target;
-        }
-      }
-    } catch (err) { authError.textContent = err.message; }
   });
+}
+bindPassToggle(passToggle1, pass1);
+bindPassToggle(passToggle2, pass2);
+
+// Сабмит формы авторизации/регистрации
+authForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  authError.textContent = '';
+  const fd = new FormData(authForm);
+  const data = Object.fromEntries(fd.entries());
+  if (registerMode) {
+    if (termsCheckbox && !termsCheckbox.checked) return authError.textContent = 'Подтвердите правила сервиса';
+    if (data.password !== data.confirm_password) return authError.textContent = 'Пароли не совпадают';
+    if ((data.password || '').length < 6) return authError.textContent = 'Мин. 6 символов';
+  }
+  const ep = registerMode ? '/api/register' : '/api/login';
+  try {
+    const r = await fetch(ep, { method: 'POST', ...json(data) });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Ошибка');
+    localStorage.setItem('token', res.token);
+    hideAuth();
+    if (intendedRoute) {
+      const target = intendedRoute;
+      intendedRoute = null;
+      const currentHash = (window.location.hash || '').replace('#','');
+      if (currentHash === target) {
+        navigate(target);
+      } else {
+        window.location.hash = target;
+      }
+    }
+  } catch (err) { authError.textContent = err.message; }
+});
+
+// --------- Downloads: APK & PWA ---------
+const dlApkBtn = document.querySelector('.auth-aside .store-btn.android');
+const dlPwaBtn = document.querySelector('.auth-aside .store-btn.pwa');
+// APK URL можно задать глобально: window.APP_APK_URL = 'https://.../xpdrop.apk'
+const APK_URL = (typeof window !== 'undefined' && window.APP_APK_URL) ? window.APP_APK_URL : '';
+
+// APK download handler
+dlApkBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (APK_URL) {
+    window.open(APK_URL, '_blank', 'noopener');
+  } else {
+    showToast('APK скоро будет доступен. Свяжитесь с поддержкой для раннего доступа.', 'error');
+  }
+});
+
+// PWA install handler via beforeinstallprompt
+let deferredPrompt = null;
+// Изначально кнопку можно сделать неактивной до события
+if (dlPwaBtn) dlPwaBtn.classList.toggle('disabled', true);
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Разблокируем кнопку PWA
+  if (dlPwaBtn) dlPwaBtn.classList.remove('disabled');
+});
+window.addEventListener('appinstalled', () => {
+  showToast('Приложение установлено как PWA', 'success');
+  deferredPrompt = null;
+});
+dlPwaBtn?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  // Если уже установлено (например, отображается в standalone), предложим инструкцию/сообщение
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) return showToast('PWA уже установлено', 'success');
+  if (!deferredPrompt) {
+    // iOS или десктопы без поддержки: показать подсказку
+    return showToast('Установка PWA недоступна. Используйте меню браузера: «Добавить на главный экран».', 'error');
+  }
+  try {
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      showToast('Установка PWA запущена', 'success');
+    } else {
+      showToast('Установка отменена', 'error');
+    }
+  } finally {
+    deferredPrompt = null;
+    // Можно снова заблокировать кнопку до нового события
+    if (dlPwaBtn) dlPwaBtn.classList.add('disabled');
+  }
+});
 
   /* -------------------- NAV -------------------- */
   const getTargetFromHash = () => {
@@ -650,67 +746,37 @@ function cleanTitle(s) {
     e.preventDefault();
     const target = b.dataset.target;
     if (!target) return;
+    // Глобально: если пользователь не авторизован — открываем авторизацию для любого таргета
+    if (!auth()) {
+      // сопоставим catalog-page -> catalog, чтобы после логина открылась корректная страница
+      const intended = (target === 'catalog-page') ? 'catalog' : target;
+      intendedRoute = intended;
+      showAuth();
+      return;
+    }
     // Если уже активна — не перезапускаем анимации
     const isAlreadyActive = b.classList.contains('active');
     // Спец-логика для профиля: уважаем авторизацию
     if (target === 'profile') {
-      if (!auth()) { // не авторизован — показываем логин
-        intendedRoute = 'profile';
-        showAuth();
-        return;
-      }
-      if (isAlreadyActive) { window.location.href = 'profile.html'; return; }
-      // Авторизован — красивая анимация и переход на profile.html
-      navAnimating = true;
-      navBtns.forEach(x => x.classList.toggle('active', x === b));
-      // Предварительное позиционирование закреплённого пузырька в нужную точку и скрытие
-      positionStickyBubble(b, { instant: true, prehide: true });
-      await liftIconFromButton(b);
-      navAnimating = false;
+      // Переходим на отдельную страницу профиля
+      if (!isAlreadyActive) navBtns.forEach(x => x.classList.toggle('active', x === b));
       window.location.href = 'profile.html';
       return;
     }
 
     // Обычные вкладки
     if (isAlreadyActive) return;
-    navAnimating = true;
     navBtns.forEach(x => x.classList.toggle('active', x === b));
-    positionStickyBubble(b, { instant: true, prehide: true });
-    await liftIconFromButton(b);
-    // hash поменяем после подъёма, чтобы sticky аккуратно проявился уже в целевой точке
     window.location.hash = target;
-    // заметка: флаг сбросим в hashchange обработчике
+    return;
   }));
 
   // Первичная навигация по hash (например, из profile.html приходим с #deals)
   navigate(getTargetFromHash());
-  // Позиционируем закреплённый пузырёк на активной кнопке
-  const initSticky = () => {
-    const activeBtn = document.querySelector('.bottom-nav .nav-btn.active') ||
-      [...navBtns].find(b => b.dataset.target === (getTargetFromHash() === 'catalog-page' ? 'catalog-page' : getTargetFromHash()));
-    if (activeBtn) positionStickyBubble(activeBtn, { instant: true });
-  };
-  initSticky();
   window.addEventListener('hashchange', () => {
     navigate(getTargetFromHash());
-    const activeBtn = document.querySelector('.bottom-nav .nav-btn.active');
-    if (activeBtn) {
-      // На изменение hash только мгновенно переставляем закреплённый пузырёк без новой анимации подъёма
-      positionStickyBubble(activeBtn, { instant: true });
-      if (navAnimating && typeof stickyBubble !== 'undefined' && stickyBubble) {
-        // Возвращаем видимость, завершаем сценарий клика
-        stickyBubble.classList.add('reveal-up');
-        stickyBubble.style.opacity = '1';
-        stickyBubble.addEventListener('animationend', () => stickyBubble.classList.remove('reveal-up'), { once: true });
-        navAnimating = false;
-      }
-    }
   });
-  window.addEventListener('resize', () => {
-    const activeBtn = document.querySelector('.bottom-nav .nav-btn.active');
-    // На ресайзе переставляем без анимаций, чтобы избежать рывков
-    if (activeBtn) positionStickyBubble(activeBtn, { instant: true });
-  });
+  // Упрощённая версия без спец-обработки resize/sticky
 
   /* -------------------- CHATS -------------------- */
   function setChatEnabled(enabled){
