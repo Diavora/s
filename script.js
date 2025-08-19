@@ -563,28 +563,25 @@ const showAuth = (reg = false) => {
   confirmRow.classList.toggle('hidden', !reg);
   confirmRow.classList.toggle('visible', reg);
   termsRow?.classList.toggle('hidden', !reg);
-  // Вкладки активные
   loginTab?.classList.toggle('active', !reg);
   registerTab?.classList.toggle('active', reg);
-  // Тексты кнопок
   if (authSubmitBtn) authSubmitBtn.textContent = reg ? 'Зарегистрироваться' : 'Войти';
   if (authSwitch) authSwitch.textContent = reg ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
-  // Сброс ошибок и полей
   authError.textContent = '';
   if (pass1) { pass1.type = 'password'; pass1.value = ''; pass1.setAttribute('autocomplete', reg ? 'new-password' : 'current-password'); }
   if (pass2) { pass2.type = 'password'; pass2.value = ''; pass2.setAttribute('autocomplete', 'new-password'); }
-  // Сброс иконок глаза
   const resetEye = (btn) => { const i = btn?.querySelector('i'); if (i){ i.classList.remove('fa-eye-slash'); i.classList.add('fa-eye'); } };
   resetEye(passToggle1); resetEye(passToggle2);
-  // Фокус на ник
   try { authForm?.querySelector('input[name="nickname"]').focus(); } catch {}
   authOverlay.classList.add('active');
   authOverlay.classList.remove('hidden');
+  try { document.body.classList.add('modal-open'); } catch {}
 };
 
 const hideAuth = () => {
   authOverlay.classList.remove('active');
   authOverlay.classList.add('hidden');
+  try { document.body.classList.remove('modal-open'); } catch {}
 };
 
 // Переключатель под формой

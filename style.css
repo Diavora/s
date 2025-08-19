@@ -2017,7 +2017,7 @@ a.nav-btn, button.nav-btn {
   display: flex; 
   justify-content: center; 
   align-items: center;
-  z-index: 2000;
+  z-index: 10000; /* выше nav-wrap (9999), чтобы не было "прокликивания" */
   opacity: 0;
   visibility: hidden;
   pointer-events: none; /* блокируем события, пока не активна */
@@ -2028,6 +2028,14 @@ a.nav-btn, button.nav-btn {
   opacity: 1; 
   visibility: visible; 
   pointer-events: all; /* перехватываем клики */
+}
+
+/* При открытом модальном окне отключаем прокрутку тела страницы */
+body.modal-open {
+  overflow: hidden !important;
+  height: 100vh;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .modal-card {
@@ -2684,6 +2692,9 @@ a.nav-btn, button.nav-btn {
   width: 92%;
   max-width: 900px;
   padding: 0;
+  max-height: 90vh;            /* не больше экрана */
+  overflow: auto;              /* внутренняя прокрутка при необходимости */
+  -webkit-overflow-scrolling: touch;
 }
 .auth-layout {
   display: grid;
@@ -2776,6 +2787,10 @@ a.nav-btn, button.nav-btn {
 @media (max-width: 560px) {
   .auth-main { padding: 16px; }
   .auth-form input { font-size: 16px; }
+  .auth-aside { display: none; }              /* скрываем сайдбар на телефоне */
+  .auth-card { max-width: 520px; width: 94%; border-radius: 14px; }
+  .auth-title { font-size: 1.15rem; }
+  .auth-tab { padding: 6px 12px; }
 }
 
 /* -------------------- BOTTOM NAV (редизайн без пузырьков) -------------------- */
