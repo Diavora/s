@@ -1407,6 +1407,9 @@ function markDialogRead(chatId, cardEl){
     });
     showLessBtn.addEventListener('click', () => {
       const activeCat = document.querySelector('.tab-button.active')?.dataset.category || 'pc';
+      renderTab(activeCat, false);
+    });
+  };
 
   const showItemsForGame = async (gameId, gameName) => {
     const itemsPage = document.getElementById('game-items-page');
