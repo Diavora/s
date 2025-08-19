@@ -14,7 +14,14 @@ import sharp from 'sharp';
 // Ensure we always reference the backend directory where this script resides
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dbPath = path.join(__dirname, 'store.db');
+// Persist DB on Render disk when available to avoid data loss on redeploys
+const persistentBase = (() => {
+  const envPath = process.env.DB_DIR || process.env.RENDER_DISK;
+  if (envPath) return envPath;
+  return process.platform !== 'win32' ? '/data' : __dirname;
+})();
+try { fs.mkdirSync(persistentBase, { recursive: true }); } catch (_) {}
+const dbPath = path.join(persistentBase, 'store.db');
 const db = new Database(dbPath);
 
 // --- ensure existing DB has latest columns ---
@@ -109,15 +116,13 @@ if (!gCount) {
 }
 
 // Ensure uploads folder exists with robust fallback logic.
-// Prefer project directory on Windows to avoid pointing to C:\data by accident.
-// We try candidates in order and pick the first that is writable for creating 'uploads/'.
+// Windows: prefer project directory. Non-Windows (Render): prefer persistent disk.
 const isWin = process.platform === 'win32';
-const uploadBaseCandidates = [
-  process.env.UPLOADS_DIR,
-  __dirname,
-  process.env.RENDER_DISK,
-  isWin ? null : '/data',
-].filter(Boolean);
+const uploadBaseCandidates = (
+  isWin
+    ? [process.env.UPLOADS_DIR, __dirname]
+    : [process.env.UPLOADS_DIR, process.env.RENDER_DISK, '/data', __dirname]
+).filter(Boolean);
 
 let uploadsBase = __dirname;
 let uploadsDir = path.join(uploadsBase, 'uploads');
@@ -132,6 +137,22 @@ for (const base of uploadBaseCandidates) {
     // try next candidate
   }
 }
+// Best-effort one-time migration of legacy project uploads -> persistent uploads on non-Windows
+try {
+  const legacyUploads = path.join(__dirname, 'uploads');
+  if (!isWin && uploadsBase !== __dirname && fs.existsSync(legacyUploads)) {
+    const copyRecursive = (src, dst) => {
+      if (!fs.existsSync(dst)) fs.mkdirSync(dst, { recursive: true });
+      for (const name of fs.readdirSync(src)) {
+        const s = path.join(src, name);
+        const d = path.join(dst, name);
+        const st = fs.statSync(s);
+        if (st.isDirectory()) copyRecursive(s, d); else if (!fs.existsSync(d)) fs.copyFileSync(s, d);
+      }
+    };
+    copyRecursive(legacyUploads, uploadsDir);
+  }
+} catch (e) { console.warn('[uploads] migration warn:', e?.message || e); }
 const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 try { console.log('[uploads] base=', uploadsBase, 'dir=', uploadsDir); } catch(_) {}
@@ -270,8 +291,8 @@ app.use('/uploads', express.static(uploadsDir));
 // Serve frontend
 // Раздача статических файлов (HTML, CSS, JS) из корневой папки проекта
 app.use(express.static(path.join(__dirname, '..')));
-
-app.use('/avatars', express.static(path.join(__dirname, 'avatars')));
+// Serve avatars directly from the persistent avatarsDir as well (besides /uploads)
+app.use('/avatars', express.static(avatarsDir));
 app.use(express.static(path.join(__dirname, 'public'))); // Для раздачи баннеров и др. статики
 
 // --- Admin guard (simple) ---
@@ -425,15 +446,11 @@ app.post('/api/chats/:id/messages', auth, (req, res) => {
   res.status(201).json({ id: created.id });
 });
 
-// Настройка хранилища для баннеров
+// Настройка хранилища для баннеров (персистентно в uploads/banners)
+const bannersDir = path.join(uploadsDir, 'banners');
+if (!fs.existsSync(bannersDir)) fs.mkdirSync(bannersDir, { recursive: true });
 const bannerStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'public/banners');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
+  destination: (req, file, cb) => cb(null, bannersDir),
   filename: (req, file, cb) => {
     cb(null, `banner-${Date.now()}${path.extname(file.originalname)}`);
   }
@@ -1670,7 +1687,8 @@ app.post('/api/games/:id/banner', auth, (req, res) => {
       return res.status(400).json({ error: 'Файл баннера не получен' });
     }
     const gameId = req.params.id;
-    const bannerUrl = `/banners/${req.file.filename}`;
+    // Cохраняем URL под /uploads/banners/... чтобы раздавалось с постоянного диска
+    const bannerUrl = `/uploads/banners/${req.file.filename}`;
     try {
       const upd = db.prepare('UPDATE games SET banner_url = ? WHERE id = ?');
       upd.run(bannerUrl, gameId);
@@ -1717,7 +1735,14 @@ app.delete('/api/games/:id', auth, requireAdmin, (req, res) => {
     if (game.banner_url) {
       try {
         const rel = game.banner_url.replace(/^\/+/, ''); // remove leading slashes
-        const bannerAbs = path.join(__dirname, 'public', rel);
+        let bannerAbs;
+        if (rel.toLowerCase().startsWith('uploads/')) {
+          // Stored under persistent uploads
+          bannerAbs = path.join(uploadsBase, rel);
+        } else {
+          // Legacy path under public/
+          bannerAbs = path.join(__dirname, 'public', rel);
+        }
         if (fs.existsSync(bannerAbs)) {
           fs.unlinkSync(bannerAbs);
         }
@@ -1876,7 +1901,12 @@ app.get('/api/admin/items/check-photos', auth, requireAdmin, (req, res) => {
       if (!p) { missing.push({ id: r.id, reason: 'empty_photo_url' }); continue; }
       // normalize: ensure without leading slash to join with __dirname
       const rel = p.replace(/^\/+/, '');
-      const abs = path.join(__dirname, rel);
+      let abs;
+      if (rel.toLowerCase().startsWith('uploads/')) {
+        abs = path.join(uploadsBase, rel);
+      } else {
+        abs = path.join(__dirname, rel);
+      }
       if (fs.existsSync(abs)) ok++; else missing.push({ id: r.id, photo_url: p, abs });
     }
     res.json({ total: rows.length, ok, missing_count: missing.length, missing });
@@ -1900,7 +1930,7 @@ app.delete('/api/admin/items/:id', auth, requireAdmin, (req, res) => {
     try {
       if (item.photo_url) {
         const rel = String(item.photo_url).replace(/^\/+/, '');
-        const abs = path.join(__dirname, rel);
+        const abs = rel.toLowerCase().startsWith('uploads/') ? path.join(uploadsBase, rel) : path.join(__dirname, rel);
         if (fs.existsSync(abs)) fs.unlinkSync(abs);
       }
     } catch (e) {
@@ -1932,7 +1962,7 @@ app.post('/api/admin/items/bulk-delete', auth, requireAdmin, (req, res) => {
       try {
         if (item.photo_url) {
           const rel = String(item.photo_url).replace(/^\/+/, '');
-          const abs = path.join(__dirname, rel);
+          const abs = rel.toLowerCase().startsWith('uploads/') ? path.join(uploadsBase, rel) : path.join(__dirname, rel);
           if (fs.existsSync(abs)) fs.unlinkSync(abs);
         }
       } catch (e) {
